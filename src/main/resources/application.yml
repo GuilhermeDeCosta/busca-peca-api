@@ -1,0 +1,27 @@
+# Configuracao comum aos perfis dev e prod
+spring:
+  application:
+    name: buscapeca-backend
+  profiles:
+    default: dev
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate          # o esquema e criado so pelo Flyway
+    properties:
+      hibernate.jdbc.time_zone: America/Sao_Paulo
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 20MB
+  jackson:
+    time-zone: America/Sao_Paulo
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

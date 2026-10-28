@@ -1,0 +1,20 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: buscapeca-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: buscapeca
+      MYSQL_USER: ${DB_USUARIO:-buscapeca}
+      MYSQL_PASSWORD: ${DB_SENHA:-buscapeca}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_SENHA:-root}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - buscapeca-mysql-dados:/var/lib/mysql
+
+volumes:
+  buscapeca-mysql-dados:

@@ -1,0 +1,15 @@
+# Perfil de desenvolvimento local (MySQL do docker-compose.yml)
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/buscapeca?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo}
+    username: ${DB_USUARIO:buscapeca}
+    password: ${DB_SENHA:buscapeca}
+  jpa:
+    show-sql: true
+    properties:
+      hibernate.format_sql: true
+
+app:
+  front-origem: ${FRONT_ORIGEM:http://localhost:5500}
+  cookie-secure: false
+  upload-diretorio: ${UPLOAD_DIRETORIO:./uploads}
