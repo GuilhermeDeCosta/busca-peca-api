@@ -1,8 +1,24 @@
 # Busca Peça – Back-end
 
-API REST do **Busca Peça**, marketplace de autopeças. Aplicação única em Java com Spring Boot, organizada como **monolito modular** (ADR-003). É a única porta de acesso ao banco MySQL (ADR-001, ADR-004). O front-end fica em um repositório separado (ADR-015).
+API REST do **Busca Peça**, marketplace de autopeças. É uma aplicação única em Java com Spring Boot, organizada como **monolito modular** (ADR-003), e é a única porta de acesso ao banco MySQL (ADR-001, ADR-004). O front-end fica em um repositório separado (ADR-015).
 
-> **Estado atual:** apenas a estrutura do projeto. As pastas de cada módulo e camada já existem, mas ainda não há controllers, serviços, entidades nem migrações. As pastas vazias têm um arquivo `.gitkeep` só para o Git conseguir versioná-las; ele pode ser apagado quando a pasta receber o primeiro arquivo.
+> **Estado atual:** só a estrutura do projeto. As pastas de cada módulo e camada já existem, mas ainda não há controllers, serviços, entidades nem migrações. As pastas vazias têm um arquivo `.gitkeep` para o Git conseguir versioná-las; apague-o quando a pasta receber o primeiro arquivo.
+
+## Sumário
+
+1. [Tecnologias](#tecnologias)
+2. [O que instalar](#o-que-instalar)
+3. [Clonar o repositório](#clonar-o-repositório)
+4. [Rodar o projeto pela primeira vez](#rodar-o-projeto-pela-primeira-vez)
+5. [Como trabalhar com branches](#como-trabalhar-com-branches)
+6. [Estrutura de pastas](#estrutura-de-pastas)
+7. [Banco de dados e migrações](#banco-de-dados-e-migrações)
+8. [Perfis e variáveis de ambiente](#perfis-e-variáveis-de-ambiente)
+9. [Padrões da API](#padrões-da-api)
+10. [Ordem de implementação](#ordem-de-implementação)
+11. [Problemas comuns](#problemas-comuns)
+
+---
 
 ## Tecnologias
 
@@ -10,7 +26,7 @@ API REST do **Busca Peça**, marketplace de autopeças. Aplicação única em Ja
 |---|---|
 | Linguagem | Java 21 (LTS) |
 | Framework | Spring Boot 4.1.2 |
-| Build | Maven |
+| Build | Maven (pelo Maven Wrapper `mvnw`, não precisa instalar) |
 | Banco | MySQL 8 (InnoDB, `utf8mb4_0900_ai_ci`) |
 | IDE | IntelliJ IDEA |
 | Ambiente local | MySQL em Docker Compose + aplicação pelo IntelliJ em `localhost:8080` |
@@ -20,32 +36,205 @@ Dependências: Spring Web, Spring Data JPA, MySQL Driver, Flyway Migration (com 
 
 A adicionar depois: springdoc-openapi (Swagger), MapStruct, Resilience4j e Testcontainers.
 
-## Pré-requisitos
+---
 
-- JDK 21
-- IntelliJ IDEA
-- Docker Desktop (para o MySQL local)
-- Git
+## O que instalar
 
-## Como iniciar o projeto
+Instale tudo antes de clonar. Depois de cada instalação, feche e abra o terminal e rode o comando de verificação.
 
-1. **Clonar o repositório**
+| Ferramenta | Para que serve | Onde baixar | Como verificar |
+|---|---|---|---|
+| **Git** | Versionar o código e trabalhar com branches | https://git-scm.com/downloads | `git --version` |
+| **JDK 21** | Compilar e rodar o Java | https://adoptium.net (Eclipse Temurin 21 LTS) | `java -version` (deve mostrar `21`) |
+| **Docker Desktop** | Rodar o MySQL sem instalá-lo na máquina | https://www.docker.com/products/docker-desktop | `docker --version` e `docker compose version` |
+| **IntelliJ IDEA** | Editar e rodar o projeto (Community ou Ultimate) | https://www.jetbrains.com/idea/download | Abrir o programa |
+
+Opcional, mas útil:
+
+- **Cliente de banco** para ver as tabelas: MySQL Workbench, DBeaver ou o painel *Database* do IntelliJ Ultimate.
+- **Cliente HTTP** para testar a API: Postman, Insomnia ou o *HTTP Client* do IntelliJ.
+
+### Observações por sistema
+
+- **Windows:** no instalador do Temurin, marque *Set JAVA_HOME* e *Add to PATH*. O Docker Desktop pede o WSL 2; aceite e reinicie o computador se ele pedir.
+- **macOS:** escolha o instalador certo do Docker Desktop (Apple Silicon ou Intel).
+- **Linux:** instale o Docker Engine e o plugin `docker compose` pelo gerenciador da sua distribuição e adicione seu usuário ao grupo `docker`.
+
+Não é preciso instalar MySQL nem Maven: o MySQL roda no Docker e o Maven vem junto no projeto pelo `mvnw`.
+
+### Configurar o Git (só na primeira vez)
+
+```bash
+git config --global user.name "Seu Nome"
+git config --global user.email "seu-email@exemplo.com"
+git config --global init.defaultBranch main
+```
+
+Use o mesmo e-mail da sua conta do GitHub, para os commits aparecerem no seu perfil.
+
+---
+
+## Clonar o repositório
+
+1. No GitHub, abra o repositório, clique em **Code** e copie a URL (HTTPS).
+2. No terminal, vá até a pasta onde guarda seus projetos e rode:
+
    ```bash
    git clone <url-do-repositorio>
    cd buscapeca-backend
    ```
-2. **Criar o arquivo de variáveis**: copie `.env.exemplo` para `.env` (no PowerShell: `Copy-Item .env.exemplo .env`). O `.env` não vai para o GitHub.
-3. **Subir o MySQL**
+
+3. Confira que está na branch `main` e atualizado:
+
+   ```bash
+   git status
+   ```
+
+Pelo IntelliJ também funciona: na tela inicial, *Get from VCS* → cole a URL → *Clone*.
+
+> Se o GitHub pedir senha no `git push`, use um **Personal Access Token** (GitHub → *Settings → Developer settings → Personal access tokens*) no lugar da senha, ou faça login pelo IntelliJ em *Settings → Version Control → GitHub*.
+
+---
+
+## Rodar o projeto pela primeira vez
+
+1. **Criar o arquivo de variáveis.** Copie o modelo `.env.exemplo` para `.env`:
+
+   ```bash
+   # Linux e macOS
+   cp .env.exemplo .env
+   ```
+   ```powershell
+   # Windows (PowerShell)
+   Copy-Item .env.exemplo .env
+   ```
+
+   O `.env` tem senhas e **nunca** vai para o GitHub (já está no `.gitignore`).
+
+2. **Subir o MySQL.** Com o Docker Desktop aberto:
+
    ```bash
    docker compose up -d
    ```
-   Cria o schema `buscapeca` com `utf8mb4_0900_ai_ci` na porta 3306.
-4. **Abrir no IntelliJ**: *File → Open* → pasta do projeto. O IntelliJ lê o `pom.xml` e baixa as dependências. Confira em *File → Project Structure → Project* que o SDK é o 21.
-5. **Ativar o Lombok**: *Settings → Build, Execution, Deployment → Compiler → Annotation Processors* → *Enable annotation processing*.
-6. **Rodar**: execute a classe principal. O perfil `dev` já é o padrão (para deixar explícito: *Run → Edit Configurations → Active profiles* = `dev`).
-7. **Testar**: acesse `http://localhost:8080/actuator/health`. Deve responder `{"status":"UP"}`.
+
+   Isso cria o schema `buscapeca` com `utf8mb4_0900_ai_ci` na porta 3306. Para conferir se está rodando: `docker compose ps`.
+
+3. **Abrir no IntelliJ.** *File → Open* → pasta `buscapeca-backend`. O IntelliJ lê o `pom.xml` e baixa as dependências (a primeira vez demora alguns minutos).
+
+4. **Conferir o JDK.** *File → Project Structure → Project* → SDK = **21**.
+
+5. **Ativar o Lombok.** *Settings → Build, Execution, Deployment → Compiler → Annotation Processors* → marque *Enable annotation processing*. Se o IntelliJ sugerir instalar o plugin do Lombok, aceite.
+
+6. **Rodar a aplicação.** Execute a classe principal (botão ▶ ao lado do `main`). O perfil `dev` já é o padrão; para deixá-lo explícito, use *Run → Edit Configurations → Active profiles* = `dev`.
+
+   Pelo terminal também funciona:
+
+   ```bash
+   # Linux e macOS
+   ./mvnw spring-boot:run
+   ```
+   ```powershell
+   # Windows
+   .\mvnw.cmd spring-boot:run
+   ```
+
+7. **Testar.** Acesse `http://localhost:8080/actuator/health`. A resposta deve ser `{"status":"UP"}`.
 
 > Enquanto a configuração de segurança não for criada, o Spring Security protege todas as rotas com um usuário gerado automaticamente (a senha aparece no console). Isso é esperado nesta fase.
+
+Para desligar o banco ao fim do dia: `docker compose down` (os dados continuam salvos). Para apagar o banco e começar do zero: `docker compose down -v`.
+
+---
+
+## Como trabalhar com branches
+
+A branch `main` tem sempre código que compila e roda. **Ninguém faz commit direto na `main`.** Cada tarefa ganha sua própria branch, e o código entra na `main` por Pull Request (PR) revisado por outra pessoa do grupo.
+
+### Nome das branches
+
+Formato: `tipo/codigo-do-caso-de-uso-descricao-curta`, tudo em minúsculas, com hífen e sem acento.
+
+| Tipo | Quando usar | Exemplo |
+|---|---|---|
+| `feature/` | Funcionalidade nova | `feature/bp1-41-login` |
+| `fix/` | Correção de erro | `fix/bp1-22-estoque-carrinho` |
+| `migration/` | Nova migração Flyway | `migration/v3-catalogo` |
+| `docs/` | Só documentação | `docs/readme-inicial` |
+| `refactor/` | Reorganizar código sem mudar o comportamento | `refactor/tratador-erros` |
+| `chore/` | Configuração, dependências, build | `chore/adicionar-swagger` |
+
+### Passo a passo de uma tarefa
+
+1. **Atualize a `main`** antes de começar:
+
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
+
+2. **Crie a branch** a partir dela:
+
+   ```bash
+   git checkout -b feature/bp1-41-login
+   ```
+
+3. **Trabalhe e faça commits pequenos**, cada um com uma mudança só:
+
+   ```bash
+   git status                      # ver o que mudou
+   git add .                       # preparar os arquivos
+   git commit -m "feat(usuario): cria endpoint de login"
+   ```
+
+4. **Envie a branch** para o GitHub (o `-u` só é preciso no primeiro envio):
+
+   ```bash
+   git push -u origin feature/bp1-41-login
+   ```
+
+5. **Abra o Pull Request** no GitHub: *Compare & pull request* → base `main` → descreva o que foi feito e o caso de uso (ex.: BP1-41) → peça revisão a alguém do grupo.
+
+6. **Depois do merge**, volte para a `main`, atualize e apague a branch local:
+
+   ```bash
+   git checkout main
+   git pull origin main
+   git branch -d feature/bp1-41-login
+   ```
+
+### Manter a branch atualizada
+
+Se a `main` recebeu mudanças enquanto você trabalhava, traga-as para a sua branch antes de abrir o PR:
+
+```bash
+git checkout main
+git pull origin main
+git checkout feature/bp1-41-login
+git merge main
+```
+
+Se houver conflito, o Git marca os arquivos. Resolva no IntelliJ (*Git → Resolve Conflicts*), depois rode `git add .` e `git commit`.
+
+### Mensagens de commit
+
+Formato: `tipo(modulo): o que foi feito`, no presente.
+
+```
+feat(peca): adiciona cadastro de peça
+fix(carrinho): impede quantidade maior que o estoque
+migration(catalogo): cria V3 com categoria, veiculo e tag
+docs: atualiza README com passo a passo de branches
+```
+
+### Antes de abrir o PR, confira
+
+- [ ] A aplicação sobe sem erro e `/actuator/health` responde `UP`.
+- [ ] Os testes passam (`./mvnw test` ou `.\mvnw.cmd test`).
+- [ ] Nenhum `.env`, senha ou chave foi commitado.
+- [ ] Migrações novas seguem o número combinado no grupo e nenhuma migração antiga foi editada.
+- [ ] A API devolve DTOs, nunca entidades.
+
+---
 
 ## Estrutura de pastas
 
@@ -54,6 +243,7 @@ Os pacotes são organizados **por domínio**, não por tipo técnico.
 ```
 buscapeca-backend/
 ├── pom.xml                  dependências e build
+├── mvnw, mvnw.cmd           Maven Wrapper (Linux/macOS e Windows)
 ├── docker-compose.yml       MySQL local
 ├── .env.exemplo             modelo das variáveis (o .env real fica fora do Git)
 ├── .gitignore
@@ -121,13 +311,15 @@ Regras gerais: toda regra de negócio fica no `service`; a API nunca devolve ent
 | notificacao | notificacao | `/api/notificacoes` |
 | administracao | termo_uso, permissao, papel_permissao, log_auditoria | `/api/admin` |
 
+---
+
 ## Banco de dados e migrações
 
-O esquema `buscapeca` é criado **somente** pelas migrações Flyway em `src/main/resources/db/migration`. O Hibernate está em `ddl-auto: validate`.
+O esquema `buscapeca` é criado **somente** pelas migrações Flyway em `src/main/resources/db/migration`. O Hibernate está em `ddl-auto: validate`: ele confere se as entidades batem com as tabelas, mas nunca cria nem altera nada.
 
 - Nome do arquivo: `V<número>__<descricao>.sql` (dois sublinhados), ex.: `V3__criar_tabelas_catalogo.sql`.
 - Uma migração que já rodou **nunca** é editada; para corrigir, crie outra.
-- Combinem no grupo o número antes de abrir a branch.
+- Combinem no grupo o número antes de abrir a branch, para duas pessoas não criarem a mesma versão.
 - Tabelas e colunas em minúsculas, singular, com sublinhado; PK `id_<tabela>`; dinheiro em `DECIMAL`, nunca `FLOAT`.
 
 | Versão | Conteúdo |
@@ -143,6 +335,8 @@ O esquema `buscapeca` é criado **somente** pelas migrações Flyway em `src/mai
 | V9 | dados iniciais: papéis, permissões, categorias, primeiro termo de uso |
 | V10 | diagrama_tecnico, hotspot (quando BP1-12 for priorizado) |
 
+---
+
 ## Perfis e variáveis de ambiente
 
 | Perfil | Uso |
@@ -152,15 +346,22 @@ O esquema `buscapeca` é criado **somente** pelas migrações Flyway em `src/mai
 
 Variáveis (lista completa em `.env.exemplo`): `DB_URL`, `DB_USUARIO`, `DB_SENHA`, `JWT_SEGREDO`, `JWT_EXPIRACAO_MINUTOS`, `FRONT_ORIGEM`, `COOKIE_DOMINIO`, `EMAIL_HOST`, `EMAIL_USUARIO`, `EMAIL_SENHA`, `CODIGO_PECA_API_URL`, `CODIGO_PECA_API_CHAVE`, `UPLOAD_DIRETORIO`.
 
+Quando alguém adicionar uma variável nova, ela deve entrar também no `.env.exemplo` (sem o valor real) e ser avisada no grupo.
+
+---
+
 ## Padrões da API
 
 - Rotas começam com `/api`, substantivos no plural, JSON em camelCase.
 - Listagens paginadas com `pagina` e `tamanho` (padrão 20, máximo 100).
 - Erros: 400 dados inválidos, 401 não logado, 403 sem permissão, 404 não existe, 409 conflito de regra, 500 erro inesperado.
+- A lista completa de endpoints está na *Documentação do Back-end v2* e, quando o springdoc for adicionado, no Swagger em `http://localhost:8080/swagger-ui.html`.
+
+---
 
 ## Ordem de implementação
 
-1. Base: Docker Compose, perfis, `compartilhado`, tratador de erros, Swagger.
+1. Base: perfis, `compartilhado`, tratador de erros, Swagger.
 2. Usuários e segurança (V1, V2, V9): cadastro, login com cookie, logout, `me`, CSRF, CORS.
 3. Catálogo (V3).
 4. Minha Loja e peças (V4).
@@ -170,8 +371,25 @@ Variáveis (lista completa em `.env.exemplo`): `DB_URL`, `DB_USUARIO`, `DB_SENHA
 8. Comunicação e pós-venda (V8).
 9. Administração.
 
+---
+
+## Problemas comuns
+
+| Sintoma | Causa provável | Solução |
+|---|---|---|
+| `java -version` mostra outra versão | Outro JDK no PATH | Ajuste o `JAVA_HOME` para o JDK 21 e reabra o terminal |
+| `Communications link failure` ao iniciar | MySQL não está rodando | Abra o Docker Desktop e rode `docker compose up -d` |
+| Porta 3306 já em uso | MySQL instalado na máquina | Pare o serviço MySQL local ou mude a porta no `docker-compose.yml` e no `.env` |
+| Porta 8080 já em uso | Outra aplicação rodando | Feche a outra instância ou mude `server.port` no `application-dev.yml` |
+| Getters e setters "não existem" | Lombok desativado | Ative *Annotation Processors* (passo 5) |
+| `Validate failed: Migration checksum mismatch` | Uma migração já executada foi editada | Desfaça a edição e crie uma migração nova; em último caso, `docker compose down -v` apaga o banco local |
+| `Schema-validation: missing table` | Entidade criada sem a migração | Crie a migração da tabela antes de rodar |
+| `git push` recusado | Branch desatualizada | `git pull` na sua branch e envie de novo |
+
+---
+
 ## Documentação de referência
 
-- Busca Peça – Documentação do Back-end
+- Busca Peça – Documentação do Back-end v2
 - Busca Peça – Documentação do Banco de Dados (MySQL)
 - ADRs do Busca Peça
