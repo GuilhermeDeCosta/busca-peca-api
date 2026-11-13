@@ -10,6 +10,10 @@ spring:
     host: ${EMAIL_HOST}
     username: ${EMAIL_USUARIO}
     password: ${EMAIL_SENHA}
+    properties:
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
 
 app:
   front-origem: ${FRONT_ORIGEM}

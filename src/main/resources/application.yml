@@ -1,4 +1,9 @@
 # Configuracao comum aos perfis dev e prod
+server:
+  port: 8080
+  servlet:
+    context-path: /api            # todas as rotas ficam em /api/... (Documentacao do Back-end v2)
+
 spring:
   application:
     name: buscapeca-backend
@@ -13,6 +18,8 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    placeholders:
+      admin_email: ${ADMIN_EMAIL:admin@buscapeca.com.br}
   servlet:
     multipart:
       max-file-size: 5MB
@@ -25,3 +32,20 @@ management:
     web:
       exposure:
         include: health
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    csrf:
+      enabled: true               # o Swagger envia o X-XSRF-TOKEN sozinho
+    with-credentials: true
+
+app:
+  jwt:
+    segredo: ${JWT_SEGREDO}
+    expiracao-minutos: ${JWT_EXPIRACAO_MINUTOS:120}
+  admin:
+    email: ${ADMIN_EMAIL:admin@buscapeca.com.br}
+    senha: ${ADMIN_SENHA:}

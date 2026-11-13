@@ -2,7 +2,7 @@
 
 API REST do **Busca Peça**, marketplace de autopeças. É uma aplicação única em Java com Spring Boot, organizada como **monolito modular** (ADR-003), e é a única porta de acesso ao banco MySQL (ADR-001, ADR-004). O front-end fica em um repositório separado (ADR-015).
 
-> **Estado atual:** só a estrutura do projeto. As pastas de cada módulo e camada já existem, mas ainda não há controllers, serviços, entidades nem migrações. As pastas vazias têm um arquivo `.gitkeep` para o Git conseguir versioná-las; apague-o quando a pasta receber o primeiro arquivo.
+> **Estado atual (base funcional):** banco completo (migrações V1 a V9), tratador de erros, paginação, Swagger, segurança (cadastro, login com JWT em cookie, logout, `me`, CSRF, CORS, recuperação de senha) e catálogo (categorias, veículos, tags). As rotas prontas estão em [O que já funciona](#o-que-já-funciona). Os demais módulos (loja, peças, busca, carrinho, pedidos...) ainda têm só as pastas, com um arquivo `.gitkeep`; apague-o quando a pasta receber o primeiro arquivo.
 
 ## Sumário
 
@@ -16,6 +16,7 @@ API REST do **Busca Peça**, marketplace de autopeças. É uma aplicação únic
 8. [Perfis e variáveis de ambiente](#perfis-e-variáveis-de-ambiente)
 9. [Padrões da API](#padrões-da-api)
 10. [Ordem de implementação](#ordem-de-implementação)
+11. [O que já funciona](#o-que-já-funciona)
 11. [Problemas comuns](#problemas-comuns)
 
 ---
@@ -138,9 +139,14 @@ Pelo IntelliJ também funciona: na tela inicial, *Get from VCS* → cole a URL �
    .\mvnw.cmd spring-boot:run
    ```
 
-7. **Testar.** Acesse `http://localhost:8080/actuator/health`. A resposta deve ser `{"status":"UP"}`.
+7. **Testar.** Acesse `http://localhost:8080/api/actuator/health`. A resposta deve ser `{"status":"UP"}`. O Swagger fica em `http://localhost:8080/api/swagger-ui.html`.
 
-> Enquanto a configuração de segurança não for criada, o Spring Security protege todas as rotas com um usuário gerado automaticamente (a senha aparece no console). Isso é esperado nesta fase.
+> **Sem Docker?** Também funciona com o MySQL 8 instalado direto no Windows. Crie o banco e o usuário uma vez no *MySQL Command Line Client*:
+> ```sql
+> CREATE DATABASE IF NOT EXISTS buscapeca CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+> CREATE USER IF NOT EXISTS 'buscapeca'@'localhost' IDENTIFIED BY 'buscapeca';
+> GRANT ALL PRIVILEGES ON buscapeca.* TO 'buscapeca'@'localhost';
+> ```
 
 Para desligar o banco ao fim do dia: `docker compose down` (os dados continuam salvos). Para apagar o banco e começar do zero: `docker compose down -v`.
 
@@ -228,7 +234,7 @@ docs: atualiza README com passo a passo de branches
 
 ### Antes de abrir o PR, confira
 
-- [ ] A aplicação sobe sem erro e `/actuator/health` responde `UP`.
+- [ ] A aplicação sobe sem erro e `/api/actuator/health` responde `UP`.
 - [ ] Os testes passam (`./mvnw test` ou `.\mvnw.cmd test`).
 - [ ] Nenhum `.env`, senha ou chave foi commitado.
 - [ ] Migrações novas seguem o número combinado no grupo e nenhuma migração antiga foi editada.
@@ -355,7 +361,7 @@ Quando alguém adicionar uma variável nova, ela deve entrar também no `.env.ex
 - Rotas começam com `/api`, substantivos no plural, JSON em camelCase.
 - Listagens paginadas com `pagina` e `tamanho` (padrão 20, máximo 100).
 - Erros: 400 dados inválidos, 401 não logado, 403 sem permissão, 404 não existe, 409 conflito de regra, 500 erro inesperado.
-- A lista completa de endpoints está na *Documentação do Back-end v2* e, quando o springdoc for adicionado, no Swagger em `http://localhost:8080/swagger-ui.html`.
+- A lista completa de endpoints está na *Documentação do Back-end v2* e, para as rotas já prontas, no Swagger em `http://localhost:8080/api/swagger-ui.html`.
 
 ---
 
@@ -370,6 +376,39 @@ Quando alguém adicionar uma variável nova, ela deve entrar também no `.env.ex
 7. Carrinho e pedido (V7).
 8. Comunicação e pós-venda (V8).
 9. Administração.
+
+---
+
+## O que já funciona
+
+Todas as rotas começam com `http://localhost:8080/api`.
+
+| Método | Rota | Acesso | O que faz |
+|---|---|---|---|
+| GET | `/auth/csrf` | Público | Devolve `{ headerName, token }`. Mande o `token` no cabeçalho `X-XSRF-TOKEN` em todo POST, PUT, PATCH e DELETE |
+| POST | `/auth/login` | Público | `{ email, senha, manterConectado }`. Grava o JWT no cookie HttpOnly `BP_SESSAO` |
+| POST | `/auth/logout` | Público | Apaga o cookie |
+| GET | `/auth/me` | Logado | Nome, papéis, `temLoja`, `administrador`, `aceiteTermosPendente` |
+| POST | `/auth/recuperar-senha` | Público | `{ email }`. 404 se o e-mail não tem conta. No perfil `dev` o e-mail sai no console |
+| POST | `/auth/redefinir-senha` | Público | `{ token, novaSenha, confirmacaoSenha }` |
+| POST | `/usuarios` | Público | Cadastro (papel COMPRADOR). Aceita camelCase e snake_case; não exige CSRF |
+| GET | `/usuarios/me` | Logado | Perfil |
+| PUT ou PATCH | `/usuarios/me` | Logado | `{ nomeExibicao, telefone, descricao }`. Campo ausente não muda |
+| PUT | `/usuarios/me/senha` | Logado | `{ senhaAtual, novaSenha }` |
+| POST | `/usuarios/me/termos/aceite` | Logado | Aceita a versão vigente dos termos |
+| GET | `/termos/vigentes` | Público | Termos de Uso e Política de Privacidade vigentes |
+| GET | `/categorias` e `/categorias/{id}` | Público | Árvore `{ idCategoria, nome, subcategorias }` |
+| GET | `/veiculos/marcas` | Público | Lista de marcas |
+| GET | `/veiculos?marca=&modelo=&ano=` | Público | Veículos (lista simples, filtros opcionais) |
+| GET | `/tags` | Público | Tags dos filtros |
+
+**Usuário administrador no perfil `dev`:** `admin@buscapeca.com.br` / `Admin@123`. Em produção, o e-mail e a senha vêm de `ADMIN_EMAIL` e `ADMIN_SENHA`, e nenhuma senha fica no repositório.
+
+**Testar pelo Swagger:** chame `GET /auth/csrf` uma vez (o Swagger reenvia o token sozinho), depois `POST /auth/login`, e as rotas de "Logado" passam a funcionar.
+
+**Dados de teste:** no perfil `dev`, a pasta `db/dev` carrega veículos e tags de exemplo (`V1000__dados_de_teste.sql`). Ela nunca roda em produção.
+
+**Front-end:** abra o front em `http://localhost:5500` (não em `127.0.0.1:5500`), senão o navegador trata como outro site e não envia o cookie de login.
 
 ---
 
