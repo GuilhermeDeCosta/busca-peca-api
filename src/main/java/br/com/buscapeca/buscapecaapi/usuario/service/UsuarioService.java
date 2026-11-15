@@ -119,7 +119,7 @@ public class UsuarioService {
         return mapper.paraResponse(buscarComPapeis(idUsuario));
     }
 
-    /** Campo ausente (null) fica como esta; texto vazio apaga o valor. */
+    /** Campo ausente (null) fica como esta; texto vazio apaga o valor (BP1-60, dados empresariais). */
     @Transactional
     public UsuarioResponse atualizarPerfil(Long idUsuario, AtualizarPerfilRequest req) {
         Usuario usuario = buscarComPapeis(idUsuario);
@@ -131,6 +131,13 @@ public class UsuarioService {
         }
         if (req.descricao() != null) {
             usuario.setDescricao(vazioParaNulo(req.descricao()));
+        }
+        if (req.razaoSocial() != null) {
+            usuario.setRazaoSocial(vazioParaNulo(req.razaoSocial()));
+        }
+        if (req.inscricaoEstadual() != null) {
+            String ie = vazioParaNulo(req.inscricaoEstadual());
+            usuario.setInscricaoEstadual(ie == null ? null : ie.toUpperCase(Locale.ROOT));
         }
         return mapper.paraResponse(usuario);
     }
