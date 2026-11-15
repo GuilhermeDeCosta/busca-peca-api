@@ -20,6 +20,8 @@ public class UsuarioMapper {
                 u.getEmail(),
                 u.getTipoPessoa(),
                 u.getCnpjCpf(),
+                u.getRazaoSocial(),
+                u.getInscricaoEstadual(),
                 u.getTelefone(),
                 u.getFotoUrl(),
                 u.getDescricao(),
