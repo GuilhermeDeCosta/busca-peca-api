@@ -11,6 +11,8 @@ spring:
   flyway:
     # db/dev tem veiculos e tags de teste; nunca roda em producao
     locations: classpath:db/migration,classpath:db/dev
+    # A V1000 de teste ja rodou; sem isto, migracoes novas (V10, V11...) seriam bloqueadas
+    out-of-order: true
 
 app:
   front-origem: ${FRONT_ORIGEM:http://localhost:5500}

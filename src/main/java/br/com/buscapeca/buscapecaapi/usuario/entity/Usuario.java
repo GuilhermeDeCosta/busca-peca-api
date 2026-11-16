@@ -59,6 +59,12 @@ public class Usuario {
     @Column(name = "cnpj_cpf", length = 14)
     private String cnpjCpf;
 
+    @Column(name = "razao_social", length = 150)
+    private String razaoSocial;
+
+    @Column(name = "inscricao_estadual", length = 20)
+    private String inscricaoEstadual;
+
     @Column(name = "telefone", length = 20)
     private String telefone;
 

@@ -72,7 +72,8 @@ public class RecuperacaoSenhaService {
         token.setDataExpiracao(LocalDateTime.now().plusMinutes(VALIDADE_MINUTOS));
         tokenRepository.save(token);
 
-        String link = props.frontOrigem() + "/pages/auth/redefinir-senha.html?token=" + tokenPuro;
+        // Caminho da tela no repositorio do front (pages/conta/Redefinir_senha.html)
+        String link = props.frontOrigem() + "/pages/conta/Redefinir_senha.html?token=" + tokenPuro;
         emailService.enviar(usuario.getEmail(), "Busca Peça: redefinição de senha", """
                 Olá, %s.
 

@@ -14,6 +14,8 @@ public record UsuarioResponse(
         String email,
         TipoPessoa tipoPessoa,
         String cnpjCpf,
+        String razaoSocial,
+        String inscricaoEstadual,
         String telefone,
         String fotoUrl,
         String descricao,
