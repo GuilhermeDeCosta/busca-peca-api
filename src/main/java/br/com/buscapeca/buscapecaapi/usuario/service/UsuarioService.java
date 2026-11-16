@@ -174,6 +174,33 @@ public class UsuarioService {
         auditoriaService.registrar(idUsuario, "ALTERAR_SENHA", "usuario", Map.of());
     }
 
+    /**
+     * Chamado pelo modulo loja ao criar a loja (BP1-55/67): grava o CPF/CNPJ
+     * (validado e sem repetir) e da o papel VENDEDOR. Roda dentro da transacao
+     * de quem chamou: se a loja falhar, nada fica gravado.
+     */
+    @Transactional
+    public UsuarioResponse habilitarVendedor(Long idUsuario, TipoPessoa tipoPessoa, String cnpjCpf) {
+        Usuario usuario = buscarComPapeis(idUsuario);
+        String documento = Documentos.somenteDigitos(cnpjCpf);
+        validarDocumento(tipoPessoa, documento);
+
+        if (usuario.getCnpjCpf() == null) {
+            if (usuarioRepository.existsByCnpjCpf(documento)) {
+                throw new DadosInvalidosException("cnpjCpf", "Documento já vinculado a outra conta.");
+            }
+            usuario.setCnpjCpf(documento);
+            usuario.setTipoPessoa(tipoPessoa);
+        } else if (!usuario.getCnpjCpf().equals(documento)) {
+            throw new DadosInvalidosException("cnpjCpf", "Use o mesmo CPF/CNPJ já informado na sua conta.");
+        }
+
+        if (!usuario.temPapel(NomePapel.VENDEDOR)) {
+            usuario.getPapeis().add(buscarPapel(NomePapel.VENDEDOR));
+        }
+        return mapper.paraResponse(usuario);
+    }
+
     /** Usado pela seguranca a cada requisicao autenticada. */
     @Transactional(readOnly = true)
     public AutorizacaoUsuario carregarAutorizacao(Long idUsuario) {

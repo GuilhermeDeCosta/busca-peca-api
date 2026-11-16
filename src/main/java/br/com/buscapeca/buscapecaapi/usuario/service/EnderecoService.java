@@ -50,6 +50,17 @@ public class EnderecoService {
         return mapper.paraResponse(buscarDoUsuario(idUsuario, idEndereco));
     }
 
+    /**
+     * Endereco pelo id, sem conferir o dono. So para outros modulos que ja
+     * conferiram o acesso (ex.: pagina publica da loja mostra cidade e UF).
+     */
+    @Transactional(readOnly = true)
+    public EnderecoResponse buscarPorId(Long idEndereco) {
+        return enderecoRepository.findById(idEndereco)
+                .map(mapper::paraResponse)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Endereço não encontrado."));
+    }
+
     /** O primeiro endereco do usuario vira principal sozinho. */
     @Transactional
     public EnderecoResponse cadastrar(Long idUsuario, EnderecoRequest req) {
