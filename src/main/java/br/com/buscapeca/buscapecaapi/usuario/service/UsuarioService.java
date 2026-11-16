@@ -119,10 +119,32 @@ public class UsuarioService {
         return mapper.paraResponse(buscarComPapeis(idUsuario));
     }
 
-    /** Campo ausente (null) fica como esta; texto vazio apaga o valor (BP1-60, dados empresariais). */
+    /**
+     * Campo ausente (null) fica como esta; texto vazio apaga o valor (BP1-60).
+     * Nome e e-mail nao podem ficar vazios; e-mail de outra conta devolve 409.
+     */
     @Transactional
     public UsuarioResponse atualizarPerfil(Long idUsuario, AtualizarPerfilRequest req) {
         Usuario usuario = buscarComPapeis(idUsuario);
+        if (req.nome() != null) {
+            if (req.nome().isBlank()) {
+                throw new DadosInvalidosException("nome", "Informe seu nome completo.");
+            }
+            usuario.setNome(req.nome().trim());
+        }
+        if (req.email() != null) {
+            String email = normalizarEmail(req.email());
+            if (email.isEmpty()) {
+                throw new DadosInvalidosException("email", "Informe seu e-mail.");
+            }
+            if (!email.equalsIgnoreCase(usuario.getEmail())) {
+                if (usuarioRepository.existsByEmailIgnoreCase(email)) {
+                    throw new ConflitoException("Este e-mail já é usado por outra conta.");
+                }
+                usuario.setEmail(email);
+                auditoriaService.registrar(idUsuario, "ALTERAR_EMAIL", "usuario", Map.of());
+            }
+        }
         if (req.nomeExibicao() != null) {
             usuario.setNomeExibicao(vazioParaNulo(req.nomeExibicao()));
         }

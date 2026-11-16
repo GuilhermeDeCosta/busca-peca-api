@@ -1,10 +1,18 @@
 package br.com.buscapeca.buscapecaapi.usuario.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /** Campos que o proprio usuario pode alterar no perfil (BP1-60). Campo ausente nao muda. */
 public record AtualizarPerfilRequest(
+        @Size(max = 150, message = "Use no máximo 150 caracteres.")
+        String nome,
+
+        @Email(message = "Informe um e-mail válido.")
+        @Size(max = 150, message = "O e-mail pode ter no máximo 150 caracteres.")
+        String email,
+
         @Size(max = 80, message = "O nome de exibição pode ter no máximo 80 caracteres.")
         String nomeExibicao,
 
