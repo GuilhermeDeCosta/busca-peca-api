@@ -32,6 +32,8 @@ public final class RotasPublicas {
             ROTA.matcher(HttpMethod.GET, "/veiculos"),
             ROTA.matcher(HttpMethod.GET, "/veiculos/**"),
             ROTA.matcher(HttpMethod.GET, "/tags"),
+            // Loja publica: so o id numerico, para /lojas/minha continuar exigindo login
+            ROTA.matcher(HttpMethod.GET, "/lojas/{id:\\d+}"),
             ROTA.matcher(HttpMethod.GET, "/actuator/health"),
             ROTA.matcher(HttpMethod.GET, "/actuator/health/**"),
             ROTA.matcher("/swagger-ui.html"),
