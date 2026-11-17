@@ -71,16 +71,17 @@ public class Loja {
     @Column(name = "retirada_balcao", nullable = false)
     private boolean retiradaBalcao = true;
 
-    /** Ex.: "Seg. a sex., 8h-18h" (V11). */
-    @Column(name = "horario_retirada", length = 100)
+    /** Ex.: "Seg. a sex., 8h-18h" (V11; 120 caracteres desde a V14, como na tela). */
+    @Column(name = "horario_retirada", length = 120)
     private String horarioRetirada;
 
+    /**
+     * Motoboy da propria loja / entrega rapida. A tela de criar loja chama de
+     * "Motoboy proprio" e a de configuracoes de "entrega rapida": e a mesma opcao
+     * (a V14 juntou as colunas motoboy_proprio e entrega_rapida).
+     */
     @Column(name = "entrega_rapida", nullable = false)
     private boolean entregaRapida;
-
-    /** Motoboy da propria loja (V11). */
-    @Column(name = "motoboy_proprio", nullable = false)
-    private boolean motoboyProprio;
 
     /** Entrega combinada com o comprador (V11). */
     @Column(name = "entrega_combinar", nullable = false)
