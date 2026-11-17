@@ -6,6 +6,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 /**
  * Quem esta fazendo a requisicao. Use nos servicos para conferir o dono
  * de um registro (Documentacao do Back-end, secao 6).
@@ -19,6 +21,15 @@ public class UsuarioLogado {
             return Long.valueOf(jwt.getToken().getSubject());
         }
         throw new NaoAutenticadoException("Faça login para continuar.");
+    }
+
+    /** Id de quem esta logado, ou vazio se ninguem estiver (rotas publicas com sessao opcional). */
+    public Optional<Long> idSeLogado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof JwtAuthenticationToken jwt) {
+            return Optional.of(Long.valueOf(jwt.getToken().getSubject()));
+        }
+        return Optional.empty();
     }
 
     public boolean temPapel(String papel) {

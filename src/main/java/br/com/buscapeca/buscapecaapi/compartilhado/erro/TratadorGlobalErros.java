@@ -37,8 +37,8 @@ public class TratadorGlobalErros {
 
     @ExceptionHandler(NegocioException.class)
     public ResponseEntity<ErroResposta> negocio(NegocioException ex, HttpServletRequest req) {
-        List<CampoInvalido> campos = ex instanceof DadosInvalidosException d && d.getCampo() != null
-                ? List.of(new CampoInvalido(d.getCampo(), d.getMessage()))
+        List<CampoInvalido> campos = ex instanceof DadosInvalidosException d
+                ? d.getCampos().entrySet().stream().map(c -> new CampoInvalido(c.getKey(), c.getValue())).toList()
                 : List.of();
         return responder(ex.getStatus(), ex.getCodigo(), ex.getMessage(), req, campos);
     }

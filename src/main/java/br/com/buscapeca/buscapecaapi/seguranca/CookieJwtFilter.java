@@ -27,7 +27,8 @@ import java.util.Optional;
  * continua valendo em POST, PUT, PATCH e DELETE.
  *
  * Nas rotas publicas o cookie e ignorado, para uma sessao vencida nao bloquear
- * paginas abertas (ex.: lista de categorias).
+ * paginas abertas (ex.: lista de categorias). Excecao: as rotas de
+ * RotasPublicas.SESSAO_OPCIONAL leem o cookie, mas seguem sem login se ele for invalido.
  */
 public class CookieJwtFilter extends OncePerRequestFilter {
 
@@ -47,7 +48,10 @@ public class CookieJwtFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        Optional<String> token = RotasPublicas.TODAS.matches(request) ? Optional.empty() : cookieSessao.ler(request);
+        boolean sessaoOpcional = RotasPublicas.SESSAO_OPCIONAL.matches(request);
+        Optional<String> token = RotasPublicas.TODAS.matches(request) && !sessaoOpcional
+                ? Optional.empty()
+                : cookieSessao.ler(request);
         if (token.isEmpty()) {
             chain.doFilter(request, response);
             return;
@@ -61,10 +65,18 @@ public class CookieJwtFilter extends OncePerRequestFilter {
             SecurityContextHolder.setContext(contexto);
         } catch (JwtException e) {
             SecurityContextHolder.clearContext();
+            if (sessaoOpcional) {
+                chain.doFilter(request, response);
+                return;
+            }
             entryPoint.commence(request, response, new InvalidBearerTokenException("Token inválido ou vencido.", e));
             return;
         } catch (AuthenticationException e) {
             SecurityContextHolder.clearContext();
+            if (sessaoOpcional) {
+                chain.doFilter(request, response);
+                return;
+            }
             entryPoint.commence(request, response, e);
             return;
         }
