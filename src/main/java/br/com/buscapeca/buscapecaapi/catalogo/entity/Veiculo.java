@@ -31,4 +31,11 @@ public class Veiculo {
 
     @Column(name = "versao", length = 80)
     private String versao;
+
+    public Veiculo(String marca, String modelo, Short ano, String versao) {
+        this.marca = marca;
+        this.modelo = modelo;
+        this.ano = ano;
+        this.versao = versao;
+    }
 }
