@@ -33,7 +33,7 @@ public class LojaMapper {
                 l.isRetiradaBalcao(),
                 l.getHorarioRetirada(),
                 l.isEntregaCombinar(),
-                l.isMotoboyProprio(),
+                l.isEntregaRapida(), // motoboyProprio: mesma opcao (V14)
                 l.isEntregaRapida(),
                 l.getFreteGratisRaioKm(),
                 l.getPedidoMinimoFreteGratis(),
@@ -58,7 +58,7 @@ public class LojaMapper {
                 l.isRetiradaBalcao(),
                 l.getHorarioRetirada(),
                 l.isEntregaCombinar(),
-                l.isMotoboyProprio(),
+                l.isEntregaRapida(), // motoboyProprio: mesma opcao (V14)
                 l.isEntregaRapida(),
                 l.getFreteGratisRaioKm(),
                 l.getPedidoMinimoFreteGratis(),
