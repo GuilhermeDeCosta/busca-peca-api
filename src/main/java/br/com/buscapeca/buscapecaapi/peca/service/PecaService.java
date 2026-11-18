@@ -37,6 +37,9 @@ import java.util.regex.Pattern;
  * Rascunho so exige o titulo. Para publicar (ATIVO ou PAUSADO) a peca precisa de
  * categoria, codigo OEM e preco; a compatibilidade e as fotos chegam em chamadas
  * seguintes do form-peca (salvarAnuncio), por isso nao sao conferidas aqui.
+ *
+ * Ao criar e ao editar, o HistoricoPrecoService registra a publicacao e as mudancas de
+ * preco (BP1-53), na mesma transacao do salvamento da peca.
  */
 @Service
 public class PecaService {
@@ -52,14 +55,17 @@ public class PecaService {
     private final LojaService lojaService;
     private final CatalogoService catalogoService;
     private final PecaMapper mapper;
+    private final HistoricoPrecoService historicoPrecoService;
 
     public PecaService(PecaRepository pecaRepository, CompatibilidadeRepository compatibilidadeRepository,
-                       LojaService lojaService, CatalogoService catalogoService, PecaMapper mapper) {
+                       LojaService lojaService, CatalogoService catalogoService, PecaMapper mapper,
+                       HistoricoPrecoService historicoPrecoService) {
         this.pecaRepository = pecaRepository;
         this.compatibilidadeRepository = compatibilidadeRepository;
         this.lojaService = lojaService;
         this.catalogoService = catalogoService;
         this.mapper = mapper;
+        this.historicoPrecoService = historicoPrecoService;
     }
 
     /** Cria o anuncio na loja de quem esta logado, como rascunho ou ja publicado. */
@@ -69,6 +75,7 @@ public class PecaService {
         peca.setIdLoja(lojaService.idDaLojaParaAnunciar(idUsuario));
         preencher(peca, req);
         peca = pecaRepository.saveAndFlush(peca);
+        registrarPreco(idUsuario, peca);
         return mapper.paraResponse(peca, List.of());
     }
 
@@ -78,6 +85,7 @@ public class PecaService {
         Peca peca = daMinhaLoja(idUsuario, idPeca);
         preencher(peca, req);
         peca = pecaRepository.saveAndFlush(peca);
+        registrarPreco(idUsuario, peca);
         return mapper.paraResponse(peca, aplicacoes(idPeca));
     }
 
@@ -142,6 +150,14 @@ public class PecaService {
             throw new AcessoNegadoException("Este anúncio é de outra loja.");
         }
         return peca;
+    }
+
+    /**
+     * Depois de salvar: grava a publicacao ou a mudanca de preco no historico. Rascunho
+     * e preco repetido nao geram linha (a regra fica no HistoricoPrecoService).
+     */
+    private void registrarPreco(Long idUsuario, Peca peca) {
+        historicoPrecoService.registrarSeMudou(idUsuario, peca.getId(), peca.getStatus().publicado(), peca.getPreco());
     }
 
     /** Confere e copia os dados do formulario. Junta todos os erros para a tela marcar de uma vez. */
