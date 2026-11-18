@@ -34,6 +34,8 @@ public final class RotasPublicas {
             ROTA.matcher(HttpMethod.GET, "/tags"),
             // Loja publica: so o id numerico, para /lojas/minha continuar exigindo login
             ROTA.matcher(HttpMethod.GET, "/lojas/{id:\\d+}"),
+            // Detalhe da peca: publico para anuncios ativos; o dono tambem ve rascunho e pausado
+            ROTA.matcher(HttpMethod.GET, "/pecas/{id:\\d+}"),
             ROTA.matcher(HttpMethod.GET, "/actuator/health"),
             ROTA.matcher(HttpMethod.GET, "/actuator/health/**"),
             ROTA.matcher("/swagger-ui.html"),
@@ -47,6 +49,13 @@ public final class RotasPublicas {
      */
     public static final RequestMatcher SEM_CSRF = new OrRequestMatcher(
             ROTA.matcher(HttpMethod.POST, "/usuarios"));
+
+    /**
+     * Rotas publicas que leem a sessao quando ela existe: a resposta muda para quem
+     * esta logado. Sessao vencida ou invalida aqui nao da 401, so segue sem login.
+     */
+    public static final RequestMatcher SESSAO_OPCIONAL = new OrRequestMatcher(
+            ROTA.matcher(HttpMethod.GET, "/pecas/{id:\\d+}"));
 
     private RotasPublicas() {
     }

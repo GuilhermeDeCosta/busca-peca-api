@@ -2,6 +2,7 @@ package br.com.buscapeca.buscapecaapi.loja.service;
 
 import br.com.buscapeca.buscapecaapi.administracao.service.AuditoriaService;
 import br.com.buscapeca.buscapecaapi.administracao.service.TermoUsoService;
+import br.com.buscapeca.buscapecaapi.compartilhado.excecao.AcessoNegadoException;
 import br.com.buscapeca.buscapecaapi.compartilhado.excecao.ConflitoException;
 import br.com.buscapeca.buscapecaapi.compartilhado.excecao.DadosInvalidosException;
 import br.com.buscapeca.buscapecaapi.compartilhado.excecao.RecursoNaoEncontradoException;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Minha Loja (BP1-55/67). Dados do dono e endereco ficam no modulo usuario:
@@ -100,6 +102,19 @@ public class LojaService {
         Loja loja = lojaRepository.findByIdAndAtivaTrue(idLoja)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Loja não encontrada."));
         return mapper.paraPublica(loja, enderecoService.buscarPorId(loja.getIdEndereco()));
+    }
+
+    /** Id da loja do usuario, se ele tiver uma. Usado pelo modulo de pecas para conferir o dono. */
+    @Transactional(readOnly = true)
+    public Optional<Long> idDaLoja(Long idUsuario) {
+        return lojaRepository.findByIdUsuario(idUsuario).map(Loja::getId);
+    }
+
+    /** Id da loja de quem vai anunciar. 403 se a conta ainda nao criou a loja. */
+    @Transactional(readOnly = true)
+    public Long idDaLojaParaAnunciar(Long idUsuario) {
+        return idDaLoja(idUsuario)
+                .orElseThrow(() -> new AcessoNegadoException("Crie sua loja antes de anunciar peças."));
     }
 
     private static String vazioParaNulo(String valor) {
