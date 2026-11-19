@@ -32,6 +32,8 @@ public final class RotasPublicas {
             ROTA.matcher(HttpMethod.GET, "/veiculos"),
             ROTA.matcher(HttpMethod.GET, "/veiculos/**"),
             ROTA.matcher(HttpMethod.GET, "/tags"),
+            // Busca de pecas: publica, so mostra anuncios ativos de lojas ativas (BP1-158)
+            ROTA.matcher(HttpMethod.GET, "/busca"),
             // Loja publica: so o id numerico, para /lojas/minha continuar exigindo login
             ROTA.matcher(HttpMethod.GET, "/lojas/{id:\\d+}"),
             // Detalhe da peca: publico para anuncios ativos; o dono tambem ve rascunho e pausado
