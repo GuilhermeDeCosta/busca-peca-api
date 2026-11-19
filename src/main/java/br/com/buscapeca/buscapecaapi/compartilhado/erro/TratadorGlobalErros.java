@@ -46,7 +46,9 @@ public class TratadorGlobalErros {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErroResposta> validacao(MethodArgumentNotValidException ex, HttpServletRequest req) {
         List<CampoInvalido> campos = ex.getBindingResult().getFieldErrors().stream()
-                .map(e -> new CampoInvalido(e.getField(), e.getDefaultMessage()))
+                // Valor com tipo errado (ex.: precoMin=abc): a mensagem do Spring vem em ingles
+                .map(e -> new CampoInvalido(e.getField(),
+                        e.isBindingFailure() ? "Valor em formato inválido." : e.getDefaultMessage()))
                 .toList();
         return responder(HttpStatus.BAD_REQUEST, "DADOS_INVALIDOS",
                 "Verifique os campos destacados.", req, campos);
