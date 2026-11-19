@@ -9,6 +9,7 @@ import br.com.buscapeca.buscapecaapi.peca.dto.AplicacaoRequest;
 import br.com.buscapeca.buscapecaapi.peca.dto.AplicacaoResponse;
 import br.com.buscapeca.buscapecaapi.peca.dto.CompatibilidadesRequest;
 import br.com.buscapeca.buscapecaapi.peca.dto.CompatibilidadesResponse;
+import br.com.buscapeca.buscapecaapi.peca.dto.HistoricoPrecoResponse;
 import br.com.buscapeca.buscapecaapi.peca.dto.PecaRequest;
 import br.com.buscapeca.buscapecaapi.peca.dto.PecaResponse;
 import br.com.buscapeca.buscapecaapi.peca.entity.Compatibilidade;
@@ -137,6 +138,16 @@ public class PecaService {
         compatibilidadeRepository.apagarDaPeca(idPeca);
         compatibilidadeRepository.saveAll(idsVeiculo.stream().map(id -> new Compatibilidade(idPeca, id)).toList());
         return new CompatibilidadesResponse(idPeca, aplicacoes(idPeca));
+    }
+
+    /**
+     * Historico de preco do anuncio (BP1-53), da mudanca mais recente para a publicacao.
+     * So a loja dona; vazio enquanto a peca nunca foi publicada.
+     */
+    @Transactional(readOnly = true)
+    public List<HistoricoPrecoResponse> historicoPreco(Long idUsuario, Long idPeca) {
+        daMinhaLoja(idUsuario, idPeca);
+        return historicoPrecoService.listar(idPeca);
     }
 
     // ----- Regras internas -----

@@ -2,6 +2,7 @@ package br.com.buscapeca.buscapecaapi.peca.controller;
 
 import br.com.buscapeca.buscapecaapi.peca.dto.CompatibilidadesRequest;
 import br.com.buscapeca.buscapecaapi.peca.dto.CompatibilidadesResponse;
+import br.com.buscapeca.buscapecaapi.peca.dto.HistoricoPrecoResponse;
 import br.com.buscapeca.buscapecaapi.peca.dto.PecaRequest;
 import br.com.buscapeca.buscapecaapi.peca.dto.PecaResponse;
 import br.com.buscapeca.buscapecaapi.peca.service.PecaService;
@@ -18,8 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 
-/** Pecas (Documentacao do Back-end, secao 5.5): cadastro, edicao, detalhe e compatibilidade. */
+/** Pecas (Documentacao do Back-end, secao 5.5): cadastro, edicao, detalhe, compatibilidade e historico de preco. */
 @RestController
 @RequestMapping("/pecas")
 public class PecaController {
@@ -58,5 +60,11 @@ public class PecaController {
     public CompatibilidadesResponse definirCompatibilidades(@PathVariable Long id,
                                                             @Valid @RequestBody CompatibilidadesRequest req) {
         return pecaService.definirCompatibilidades(usuarioLogado.id(), id, req);
+    }
+
+    /** Historico de preco do anuncio (BP1-53), do mais recente para a publicacao. So a loja dona. */
+    @GetMapping("/{id:\\d+}/historico-preco")
+    public List<HistoricoPrecoResponse> historicoPreco(@PathVariable Long id) {
+        return pecaService.historicoPreco(usuarioLogado.id(), id);
     }
 }
