@@ -2,7 +2,7 @@
 
 API REST do **Busca Peça**, marketplace de autopeças. É uma aplicação única em Java com Spring Boot, organizada como **monolito modular** (ADR-003), e é a única porta de acesso ao banco MySQL (ADR-001, ADR-004). O front-end fica em um repositório separado (ADR-015).
 
-> **Estado atual (base funcional):** banco completo (migrações V1 a V9), tratador de erros, paginação, Swagger, segurança (cadastro, login com JWT em cookie, logout, `me`, CSRF, CORS, recuperação de senha) e catálogo (categorias, veículos, tags). As rotas prontas estão em [O que já funciona](#o-que-já-funciona). Os demais módulos (loja, peças, busca, carrinho, pedidos...) ainda têm só as pastas, com um arquivo `.gitkeep`; apague-o quando a pasta receber o primeiro arquivo.
+> **Estado atual:** banco com as migrações V1 a V13, tratador de erros, paginação, Swagger, segurança (cadastro, login com JWT em cookie, logout, `me`, CSRF, CORS, recuperação de senha), perfil e endereços, catálogo (categorias, veículos, tags), loja, peças (cadastro, edição, detalhe, compatibilidade e histórico de preço) e busca. As rotas de usuário, catálogo e peças estão em [O que já funciona](#o-que-já-funciona). Carrinho, pedidos, comunicação, pós-venda e notificações ainda têm só as pastas, com um arquivo `.gitkeep`; apague-o quando a pasta receber o primeiro arquivo.
 
 ## Sumário
 
@@ -339,7 +339,12 @@ O esquema `buscapeca` é criado **somente** pelas migrações Flyway em `src/mai
 | V7 | carrinho, item_carrinho, compra, pedido, item_pedido, entrega, recibo |
 | V8 | conversa, mensagem, avaliacao, problema_pedido, anexo_problema, devolucao, disputa |
 | V9 | dados iniciais: papéis, permissões, categorias, primeiro termo de uso |
-| V10 | diagrama_tecnico, hotspot (quando BP1-12 for priorizado) |
+| V10 | endereco.identificacao; usuario.razao_social e inscricao_estadual (BP1-134) |
+| V11 | loja: `telefone`, `horario_retirada`, `motoboy_proprio`, `entrega_combinar`, `pedido_minimo_frete_gratis` (BP1-219) |
+| V12 | modelo de peça do front: `status` (RASCUNHO, ATIVO, PAUSADO, EXCLUIDO) no lugar de `anuncio_ativo`, origem NACIONAL ou IMPORTADA, `marca_peca`, `caracteristicas`; categoria, OEM e preço opcionais no rascunho (BP1-220) |
+| V13 | historico_preco: `preco_anterior` opcional (a linha da publicação não tem preço anterior) e índice por peça e data (BP1-53) |
+
+As tabelas `diagrama_tecnico` e `hotspot` (BP1-12, fase 2) entram na próxima versão livre quando forem priorizadas.
 
 ---
 
@@ -401,12 +406,19 @@ Todas as rotas começam com `http://localhost:8080/api`.
 | GET | `/veiculos/marcas` | Público | Lista de marcas |
 | GET | `/veiculos?marca=&modelo=&ano=` | Público | Veículos (lista simples, filtros opcionais) |
 | GET | `/tags` | Público | Tags dos filtros |
+| POST | `/pecas` | Vendedor | Cadastra a peça como rascunho (só o título é obrigatório) ou publicada (exige categoria, OEM e preço). 201 com `Location` |
+| PUT | `/pecas/{id}` | Vendedor (dono) | Edita a peça inteira. Publicar ou mudar o preço grava o histórico de preço |
+| GET | `/pecas/{id}` | Público | Detalhe com as aplicações. Rascunho e pausado só para o dono |
+| PUT | `/pecas/{id}/compatibilidades` | Vendedor (dono) | Substitui as aplicações (marca, modelo, ano inicial e final, versão) |
+| GET | `/pecas/{id}/historico-preco` | Vendedor (dono) | `[{ data, precoAnterior, precoNovo }]`, da mudança mais recente para a publicação (`precoAnterior` nulo). Lista vazia se nunca foi publicada |
 
 **Usuário administrador no perfil `dev`:** `admin@buscapeca.com.br` / `Admin@123`. Em produção, o e-mail e a senha vêm de `ADMIN_EMAIL` e `ADMIN_SENHA`, e nenhuma senha fica no repositório.
 
 **Testar pelo Swagger:** chame `GET /auth/csrf` uma vez (o Swagger reenvia o token sozinho), depois `POST /auth/login`, e as rotas de "Logado" passam a funcionar.
 
 **Dados de teste:** no perfil `dev`, a pasta `db/dev` carrega veículos e tags de exemplo (`V1000__dados_de_teste.sql`). Ela nunca roda em produção.
+
+**Testes unitários:** não precisam de banco (usam Mockito). Ex.: `.\mvnw.cmd test "-Dtest=HistoricoPrecoServiceTest,PecaServiceTest"` no PowerShell. Rodar `test` sem `-Dtest` inclui o `contextLoads`, que precisa do MySQL ligado.
 
 **Front-end:** abra o front em `http://localhost:5500` (não em `127.0.0.1:5500`), senão o navegador trata como outro site e não envia o cookie de login.
 
