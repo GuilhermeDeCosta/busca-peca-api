@@ -2,8 +2,11 @@ package br.com.buscapeca.buscapecaapi.peca.mapper;
 
 import br.com.buscapeca.buscapecaapi.catalogo.dto.VeiculoResponse;
 import br.com.buscapeca.buscapecaapi.peca.dto.AplicacaoResponse;
+import br.com.buscapeca.buscapecaapi.peca.dto.MeuAnuncioResponse;
 import br.com.buscapeca.buscapecaapi.peca.dto.PecaResponse;
+import br.com.buscapeca.buscapecaapi.peca.dto.StatusAnuncioResponse;
 import br.com.buscapeca.buscapecaapi.peca.entity.Peca;
+import br.com.buscapeca.buscapecaapi.peca.enums.NivelEstoque;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -40,6 +43,33 @@ public class PecaMapper {
                 p.getDataCadastro(),
                 atualizadoEm,
                 aplicacoes);
+    }
+
+    /** Linha da tabela "Meus anuncios" (BP1-225). */
+    public MeuAnuncioResponse paraMeuAnuncio(Peca p) {
+        var atualizadoEm = p.getAtualizadoEm() != null ? p.getAtualizadoEm() : p.getDataCadastro();
+        return new MeuAnuncioResponse(
+                p.getId(),
+                p.getTitulo(),
+                texto(p.getCodigoSku()),
+                texto(p.getCodigoOem()),
+                p.getPreco(),
+                p.getQuantidadeEstoque(),
+                p.getLimiteAlertaEstoque(),
+                NivelEstoque.de(p.getQuantidadeEstoque(), p.getLimiteAlertaEstoque()),
+                p.getCondicao(),
+                p.getOrigem(),
+                p.isProntaEntrega(),
+                p.getPrazoExpedicaoDias(),
+                p.getStatus(),
+                p.getDataCadastro(),
+                atualizadoEm);
+    }
+
+    /** Resposta de pausar e reativar (BP1-226). */
+    public StatusAnuncioResponse paraStatus(Peca p) {
+        var atualizadoEm = p.getAtualizadoEm() != null ? p.getAtualizadoEm() : p.getDataCadastro();
+        return new StatusAnuncioResponse(p.getId(), p.getStatus(), atualizadoEm);
     }
 
     /**

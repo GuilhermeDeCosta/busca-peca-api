@@ -1,5 +1,6 @@
 package br.com.buscapeca.buscapecaapi.peca.service;
 
+import br.com.buscapeca.buscapecaapi.administracao.service.AuditoriaService;
 import br.com.buscapeca.buscapecaapi.catalogo.service.CatalogoService;
 import br.com.buscapeca.buscapecaapi.compartilhado.excecao.AcessoNegadoException;
 import br.com.buscapeca.buscapecaapi.compartilhado.excecao.DadosInvalidosException;
@@ -14,6 +15,7 @@ import br.com.buscapeca.buscapecaapi.peca.enums.StatusPeca;
 import br.com.buscapeca.buscapecaapi.peca.mapper.PecaMapper;
 import br.com.buscapeca.buscapecaapi.peca.repository.CompatibilidadeRepository;
 import br.com.buscapeca.buscapecaapi.peca.repository.PecaRepository;
+import br.com.buscapeca.buscapecaapi.pedido.service.PedidoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -68,12 +70,18 @@ class PecaServiceTest {
     @Mock
     private HistoricoPrecoService historicoPrecoService;
 
+    @Mock
+    private PedidoService pedidoService;
+
+    @Mock
+    private AuditoriaService auditoriaService;
+
     private PecaService service;
 
     @BeforeEach
     void preparar() {
         service = new PecaService(pecaRepository, compatibilidadeRepository, lojaService, catalogoService,
-                mapper, historicoPrecoService);
+                mapper, historicoPrecoService, pedidoService, auditoriaService);
     }
 
     // ----- Cadastro e edicao chamam o historico -----

@@ -406,6 +406,9 @@ Todas as rotas começam com `http://localhost:8080/api`.
 | GET | `/veiculos/marcas` | Público | Lista de marcas |
 | GET | `/veiculos?marca=&modelo=&ano=` | Público | Veículos (lista simples, filtros opcionais) |
 | GET | `/tags` | Público | Tags dos filtros |
+| GET | `/pecas?loja=minha&q=&status=&estoque=&pagina=&tamanho=` | Vendedor | Anúncios da própria loja (ativos, pausados e rascunhos), do mais novo para o mais antigo. `status`: ATIVO, PAUSADO ou RASCUNHO; `estoque`: ZERADO, BAIXO ou NORMAL; `pagina` começa em 1. Resposta `{ itens, pagina, tamanho, totalRegistros, totalPaginas }` |
+| PATCH | `/pecas/{id}/pausar` e `/pecas/{id}/reativar` | Vendedor (dono) | `{ idPeca, status, atualizadoEm }`. 409 `STATUS_INVALIDO` se o anúncio não estiver ativo (pausar) ou pausado (reativar); 409 `ESTOQUE_ZERADO` ao reativar sem estoque |
+| DELETE | `/pecas/{id}` | Vendedor (dono) | Exclusão lógica (status EXCLUIDO), grava `EXCLUIR_PECA` em `log_auditoria`. 204; 404 se já foi excluído; 409 `PEDIDOS_EM_ANDAMENTO` se a peça está em pedido aguardando aceite, aceito, pronto ou em entrega |
 | POST | `/pecas` | Vendedor | Cadastra a peça como rascunho (só o título é obrigatório) ou publicada (exige categoria, OEM e preço). 201 com `Location` |
 | PUT | `/pecas/{id}` | Vendedor (dono) | Edita a peça inteira. Publicar ou mudar o preço grava o histórico de preço |
 | GET | `/pecas/{id}` | Público | Detalhe com as aplicações. Rascunho e pausado só para o dono |
@@ -418,7 +421,7 @@ Todas as rotas começam com `http://localhost:8080/api`.
 
 **Dados de teste:** no perfil `dev`, a pasta `db/dev` carrega veículos e tags de exemplo (`V1000__dados_de_teste.sql`). Ela nunca roda em produção.
 
-**Testes unitários:** não precisam de banco (usam Mockito). Ex.: `.\mvnw.cmd test "-Dtest=HistoricoPrecoServiceTest,PecaServiceTest"` no PowerShell. Rodar `test` sem `-Dtest` inclui o `contextLoads`, que precisa do MySQL ligado.
+**Testes unitários:** não precisam de banco (usam Mockito). Ex.: `.\mvnw.cmd test "-Dtest=HistoricoPrecoServiceTest,PecaServiceTest,PecaAnunciosServiceTest"` no PowerShell. Rodar `test` sem `-Dtest` inclui o `contextLoads`, que precisa do MySQL ligado.
 
 **Front-end:** abra o front em `http://localhost:5500` (não em `127.0.0.1:5500`), senão o navegador trata como outro site e não envia o cookie de login.
 
