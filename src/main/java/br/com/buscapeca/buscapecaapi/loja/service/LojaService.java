@@ -78,7 +78,7 @@ public class LojaService {
         loja.setTelefone(req.telefone());
         loja.setRetiradaBalcao(retirada);
         loja.setEntregaCombinar(combinar);
-        loja.setMotoboyProprio(motoboy);
+        loja.setEntregaRapida(motoboy); // "Motoboy proprio" da tela (V14)
         loja.setMetodosPagamento(EnumSet.copyOf(req.metodosPagamento()));
         loja.setAceitaFaturamentoCnpj(req.metodosPagamento().contains(MetodoPagamento.FATURADO));
         loja = lojaRepository.save(loja);
