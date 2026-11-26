@@ -9,6 +9,7 @@ import br.com.buscapeca.buscapecaapi.compartilhado.excecao.RecursoNaoEncontradoE
 import br.com.buscapeca.buscapecaapi.loja.dto.CriarLojaRequest;
 import br.com.buscapeca.buscapecaapi.loja.dto.LojaPublicaResponse;
 import br.com.buscapeca.buscapecaapi.loja.dto.LojaResponse;
+import br.com.buscapeca.buscapecaapi.loja.dto.LojaResumoResponse;
 import br.com.buscapeca.buscapecaapi.loja.entity.Loja;
 import br.com.buscapeca.buscapecaapi.loja.enums.MetodoPagamento;
 import br.com.buscapeca.buscapecaapi.loja.mapper.LojaMapper;
@@ -20,7 +21,9 @@ import br.com.buscapeca.buscapecaapi.usuario.service.UsuarioService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -115,6 +118,22 @@ public class LojaService {
     public Long idDaLojaParaAnunciar(Long idUsuario) {
         return idDaLoja(idUsuario)
                 .orElseThrow(() -> new AcessoNegadoException("Crie sua loja antes de anunciar peças."));
+    }
+
+    /**
+     * Resumo de varias lojas de uma vez (idLoja -> resumo), para o carrinho agrupar os
+     * itens por loja (BP1-22). Inclui lojas inativas, marcadas com ativa = false.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, LojaResumoResponse> resumos(Collection<Long> idsLoja) {
+        Map<Long, LojaResumoResponse> resumos = new LinkedHashMap<>();
+        if (idsLoja.isEmpty()) {
+            return resumos;
+        }
+        for (Loja loja : lojaRepository.findAllById(idsLoja)) {
+            resumos.put(loja.getId(), mapper.paraResumo(loja));
+        }
+        return resumos;
     }
 
     private static String vazioParaNulo(String valor) {

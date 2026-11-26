@@ -2,6 +2,7 @@ package br.com.buscapeca.buscapecaapi.loja.mapper;
 
 import br.com.buscapeca.buscapecaapi.loja.dto.LojaPublicaResponse;
 import br.com.buscapeca.buscapecaapi.loja.dto.LojaResponse;
+import br.com.buscapeca.buscapecaapi.loja.dto.LojaResumoResponse;
 import br.com.buscapeca.buscapecaapi.loja.entity.Loja;
 import br.com.buscapeca.buscapecaapi.loja.enums.MetodoPagamento;
 import br.com.buscapeca.buscapecaapi.usuario.dto.EnderecoResponse;
@@ -64,6 +65,17 @@ public class LojaMapper {
                 l.getPedidoMinimoFreteGratis(),
                 l.isAceitaFaturamentoCnpj(),
                 metodos(l));
+    }
+
+    /** Resumo para o carrinho e o checkout. */
+    public LojaResumoResponse paraResumo(Loja l) {
+        return new LojaResumoResponse(
+                l.getId(),
+                l.getNomeLoja(),
+                l.isRetiradaBalcao(),
+                l.isEntregaCombinar(),
+                l.isEntregaRapida(), // motoboyProprio: mesma opcao (V14)
+                l.isAtiva());
     }
 
     /** Ordem fixa (a do enum), para a tela mostrar sempre igual. */
