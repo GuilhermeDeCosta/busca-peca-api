@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,4 +34,18 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     Page<Pedido> findByIdLoja(Long idLoja, Pageable pagina);
 
     Page<Pedido> findByIdLojaAndStatus(Long idLoja, StatusPedido status, Pageable pagina);
+
+    /** Pedidos de varias compras de uma vez (historico do comprador). */
+    List<Pedido> findByIdCompraInOrderByIdAsc(Collection<Long> idsCompra);
+
+    /**
+     * Quantos pedidos o comprador tem em cada status (cartoes de Meus pedidos). Cada linha:
+     * [StatusPedido, Long].
+     */
+    @Query("""
+            SELECT p.status, COUNT(p) FROM Pedido p, Compra c
+             WHERE c.id = p.idCompra AND c.idComprador = :idComprador
+             GROUP BY p.status
+            """)
+    List<Object[]> contarPorStatusDoComprador(@Param("idComprador") Long idComprador);
 }
