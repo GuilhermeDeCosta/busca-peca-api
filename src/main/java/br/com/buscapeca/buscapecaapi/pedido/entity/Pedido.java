@@ -13,6 +13,8 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -69,7 +71,8 @@ public class Pedido {
     @Column(name = "data_pedido", nullable = false, updatable = false)
     private LocalDateTime dataPedido;
 
-    /** Preenchida pelo proprio MySQL (ON UPDATE CURRENT_TIMESTAMP). */
+    /** Preenchida pelo MySQL (ON UPDATE CURRENT_TIMESTAMP) e lida de volta depois de salvar. */
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
     @Column(name = "atualizado_em", insertable = false, updatable = false)
     private LocalDateTime atualizadoEm;
 

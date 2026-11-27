@@ -2,7 +2,7 @@
 
 API REST do **Busca Peça**, marketplace de autopeças. É uma aplicação única em Java com Spring Boot, organizada como **monolito modular** (ADR-003), e é a única porta de acesso ao banco MySQL (ADR-001, ADR-004). O front-end fica em um repositório separado (ADR-015).
 
-> **Estado atual:** banco com as migrações V1 a V15, tratador de erros, paginação, Swagger, segurança (cadastro, login com JWT em cookie, logout, `me`, CSRF, CORS, recuperação de senha), perfil e endereços, catálogo (categorias, veículos, tags), loja, peças (cadastro, edição, detalhe, compatibilidade e histórico de preço), busca, carrinho e checkout. As rotas de usuário, catálogo, peças, carrinho e compras estão em [O que já funciona](#o-que-já-funciona). Os pedidos do lado do vendedor (aceitar, recusar, retirada e entrega) ainda faltam. Comunicação, pós-venda e notificações ainda têm só as pastas, com um arquivo `.gitkeep`; apague-o quando a pasta receber o primeiro arquivo.
+> **Estado atual:** banco com as migrações V1 a V15, tratador de erros, paginação, Swagger, segurança (cadastro, login com JWT em cookie, logout, `me`, CSRF, CORS, recuperação de senha), perfil e endereços, catálogo (categorias, veículos, tags), loja, peças (cadastro, edição, detalhe, compatibilidade e histórico de preço), busca, carrinho, checkout e ciclo do pedido. As rotas de usuário, catálogo, peças, carrinho, compras e pedidos estão em [O que já funciona](#o-que-já-funciona). A lista "Minhas compras" (`GET /compras`) ainda falta. Comunicação, pós-venda e notificações ainda têm só as pastas, com um arquivo `.gitkeep`; apague-o quando a pasta receber o primeiro arquivo.
 
 ## Sumário
 
@@ -423,6 +423,15 @@ Todas as rotas começam com `http://localhost:8080/api`.
 | POST | `/carrinho/frete` | Logado | `{ cep }`. Resposta `{ regiao: { cidade, uf }, lojas: [{ idLoja, nomeLoja, retiradaBalcao, freteACombinar, opcoes }] }`. Sem transportadora integrada, toda loja volta com `freteACombinar: true` (ADR-012). 400 se o CEP for inválido |
 | POST | `/compras` | Logado | Checkout (BP1-24): `{ idEndereco, lojas: [{ idLoja, modalidade: RETIRADA ou ENTREGA, observacao, cienciaPagamentoDireto }], totalEsperado? }`. Numa transação só: confere de novo estoque e preço com as peças travadas, cria a compra e **um pedido por loja** (status `AGUARDANDO_ACEITE`, código `BP-{id}`, código de retirada), baixa o estoque e esvazia o carrinho. 201 com `Location` e `{ idCompra, criadaEm, total, idEndereco, pedidos: [{ idPedido, codigo, idLoja, nomeLoja, status, modalidade, observacao, codigoRetirada, subtotal, itens }] }`; `codigoRetirada` só na retirada. 400: sem ciência, entrega sem endereço ou modalidade que a loja não oferece. 409 (nada é gravado): `CARRINHO_VAZIO`, `CARRINHO_ALTERADO`, `ANUNCIO_INDISPONIVEL`, `ESTOQUE_INSUFICIENTE` ou `PRECO_ALTERADO` (só se `totalEsperado` vier e for diferente) |
 | GET | `/compras/{id}` | Logado (comprador) | Mesmo formato do checkout, com o preço do momento da compra. 404 se a compra é de outra pessoa |
+| GET | `/pedidos?loja=minha&status=&pagina=&tamanho=` | Vendedor | Pedidos recebidos pela loja, do mais recente (BP1-26). Página começa em 1. Cada linha: `idPedido`, `codigo`, `comprador`, `resumoItens` ("2 filtros de ar e mais 1 item"), `data`, `valorItens`, `status`, `modalidadeEntrega`. 400 se o status não existe; 403 sem loja |
+| GET | `/pedidos/{id}` | Comprador ou loja do pedido | Detalhe com `visao` (COMPRADOR ou VENDEDOR), status, valores, observação, motivos, `comprador` (nome, cidade, contato, telefone), `loja`, `enderecoEntrega` (só ENTREGA), itens com o estoque atual, `historico` e `entrega`. `codigoRetirada` só para o comprador e só na retirada. Outra pessoa: 404 |
+| PATCH | `/pedidos/{id}/aceitar` e `/recusar` | Loja do pedido | Só em `AGUARDANDO_ACEITE`. Recusar pede `{ motivo, mensagem }` e devolve o estoque |
+| PATCH | `/pedidos/{id}/em-preparacao` | Loja do pedido | De `ACEITO` |
+| PATCH | `/pedidos/{id}/pronto-retirada` | Loja do pedido | De `ACEITO` ou `EM_PREPARACAO`, só RETIRADA |
+| POST | `/pedidos/{id}/confirmar-retirada` | Loja do pedido | `{ codigo }` (com ou sem hífen). De `PRONTO_RETIRADA` para `CONCLUIDO`. Código errado: 422 `CODIGO_RETIRADA_INVALIDO` |
+| PATCH | `/pedidos/{id}/enviar` | Loja do pedido | `{ modalidade: PROPRIA, TRANSPORTADORA ou MOTOBOY, transportadora, codigoRastreio }`. De `ACEITO` ou `EM_PREPARACAO` para `EM_ENTREGA`, só ENTREGA |
+| PATCH | `/pedidos/{id}/concluir` | Comprador ou loja | De `EM_ENTREGA` para `CONCLUIDO` |
+| PATCH | `/pedidos/{id}/cancelar` | Comprador | `{ motivo, mensagem }`. Só em `AGUARDANDO_ACEITE`; devolve o estoque |
 
 **Usuário administrador no perfil `dev`:** `admin@buscapeca.com.br` / `Admin@123`. Em produção, o e-mail e a senha vêm de `ADMIN_EMAIL` e `ADMIN_SENHA`, e nenhuma senha fica no repositório.
 
@@ -430,7 +439,7 @@ Todas as rotas começam com `http://localhost:8080/api`.
 
 **Dados de teste:** no perfil `dev`, a pasta `db/dev` carrega veículos e tags de exemplo (`V1000__dados_de_teste.sql`). Ela nunca roda em produção.
 
-**Testes unitários:** não precisam de banco (usam Mockito). Ex.: `.\mvnw.cmd test "-Dtest=HistoricoPrecoServiceTest,PecaServiceTest,PecaAnunciosServiceTest,PecaCompraServiceTest,CarrinhoServiceTest,CompraServiceTest"` no PowerShell. Rodar `test` sem `-Dtest` inclui o `contextLoads`, que precisa do MySQL ligado.
+**Testes unitários:** não precisam de banco (usam Mockito). Ex.: `.\mvnw.cmd test "-Dtest=HistoricoPrecoServiceTest,PecaServiceTest,PecaAnunciosServiceTest,PecaCompraServiceTest,CarrinhoServiceTest,CompraServiceTest,PedidoServiceTest"` no PowerShell. Rodar `test` sem `-Dtest` inclui o `contextLoads`, que precisa do MySQL ligado.
 
 **Front-end:** abra o front em `http://localhost:5500` (não em `127.0.0.1:5500`), senão o navegador trata como outro site e não envia o cookie de login.
 

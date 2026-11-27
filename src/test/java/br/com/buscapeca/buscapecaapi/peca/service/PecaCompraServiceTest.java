@@ -123,6 +123,18 @@ class PecaCompraServiceTest {
         verify(pecaRepository, never()).saveAll(any());
     }
 
+    @Test
+    @DisplayName("Recusa ou cancelamento: devolve a quantidade ao estoque")
+    void devolverEstoque() {
+        Peca peca = peca(10L, "100.00", StatusPeca.PAUSADO);
+        when(pecaRepository.travarParaCompra(anyCollection())).thenReturn(List.of(peca));
+
+        service.devolverEstoque(Map.of(10L, 2));
+
+        assertThat(peca.getQuantidadeEstoque()).isEqualTo(5);
+        verify(pecaRepository).saveAll(List.of(peca));
+    }
+
     private static Peca peca(Long id, String preco, StatusPeca status) {
         Peca p = new Peca();
         p.setId(id);

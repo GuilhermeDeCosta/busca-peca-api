@@ -10,4 +10,6 @@ public interface ItemPedidoRepository extends JpaRepository<ItemPedido, Long> {
 
     /** Itens de varios pedidos de uma vez (os pedidos de uma compra). */
     List<ItemPedido> findByIdPedidoInOrderByIdAsc(Collection<Long> idsPedido);
+
+    List<ItemPedido> findByIdPedidoOrderByIdAsc(Long idPedido);
 }
