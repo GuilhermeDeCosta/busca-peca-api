@@ -1,5 +1,6 @@
 package br.com.buscapeca.buscapecaapi.peca.service;
 
+import br.com.buscapeca.buscapecaapi.compartilhado.excecao.ConflitoException;
 import br.com.buscapeca.buscapecaapi.peca.dto.PecaParaCompra;
 import br.com.buscapeca.buscapecaapi.peca.entity.Peca;
 import br.com.buscapeca.buscapecaapi.peca.enums.StatusPeca;
@@ -18,7 +19,11 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -78,6 +83,44 @@ class PecaCompraServiceTest {
     void listaVazia() {
         assertThat(service.buscarVarias(Set.of())).isEmpty();
         verifyNoInteractions(pecaRepository, vitrineRepository);
+    }
+
+    @Test
+    @DisplayName("Checkout: trava as linhas pela consulta com FOR UPDATE")
+    void travarParaCompra() {
+        when(pecaRepository.travarParaCompra(anyCollection())).thenReturn(List.of(peca(10L, "100.00", StatusPeca.ATIVO)));
+        when(vitrineRepository.precosPromocionais(anyCollection())).thenReturn(Map.of());
+        when(vitrineRepository.fotosPrincipais(anyCollection())).thenReturn(Map.of());
+
+        Map<Long, PecaParaCompra> pecas = service.travarParaCompra(Set.of(10L));
+
+        assertThat(pecas.get(10L).quantidadeEstoque()).isEqualTo(3);
+        verify(pecaRepository, never()).findAllById(any());
+    }
+
+    @Test
+    @DisplayName("Checkout: baixa a quantidade comprada do estoque")
+    void baixarEstoque() {
+        Peca peca = peca(10L, "100.00", StatusPeca.ATIVO);
+        when(pecaRepository.travarParaCompra(anyCollection())).thenReturn(List.of(peca));
+
+        service.baixarEstoque(Map.of(10L, 2));
+
+        assertThat(peca.getQuantidadeEstoque()).isEqualTo(1);
+        verify(pecaRepository).saveAll(List.of(peca));
+    }
+
+    @Test
+    @DisplayName("Checkout: nunca deixa o estoque negativo")
+    void baixarEstoqueInsuficiente() {
+        Peca peca = peca(10L, "100.00", StatusPeca.ATIVO);
+        when(pecaRepository.travarParaCompra(anyCollection())).thenReturn(List.of(peca));
+
+        assertThatThrownBy(() -> service.baixarEstoque(Map.of(10L, 4)))
+                .isInstanceOf(ConflitoException.class)
+                .extracting("codigo").isEqualTo("ESTOQUE_INSUFICIENTE");
+        assertThat(peca.getQuantidadeEstoque()).isEqualTo(3);
+        verify(pecaRepository, never()).saveAll(any());
     }
 
     private static Peca peca(Long id, String preco, StatusPeca status) {
