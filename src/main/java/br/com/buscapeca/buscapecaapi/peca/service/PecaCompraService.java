@@ -86,6 +86,23 @@ public class PecaCompraService {
         pecaRepository.saveAll(pecas);
     }
 
+    /**
+     * Devolve ao estoque as quantidades de um pedido recusado ou cancelado (idPeca ->
+     * quantidade), na transacao da mudanca de status (ADR-009). As linhas sao travadas como
+     * no checkout. Peca pausada ou excluida tambem recebe de volta: o estoque e fisico.
+     */
+    @Transactional
+    public void devolverEstoque(Map<Long, Integer> quantidades) {
+        if (quantidades.isEmpty()) {
+            return;
+        }
+        List<Peca> pecas = pecaRepository.travarParaCompra(quantidades.keySet());
+        for (Peca p : pecas) {
+            p.setQuantidadeEstoque(p.getQuantidadeEstoque() + quantidades.get(p.getId()));
+        }
+        pecaRepository.saveAll(pecas);
+    }
+
     private Map<Long, PecaParaCompra> montar(List<Peca> pecas, Collection<Long> idsPeca) {
         Map<Long, PecaParaCompra> resultado = new LinkedHashMap<>();
         Map<Long, BigDecimal> promocionais = vitrineRepository.precosPromocionais(idsPeca);
