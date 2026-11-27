@@ -17,7 +17,7 @@ public class PedidoConsultaRepository {
 
     /** Pedidos que ainda podem gerar entrega: a peca nao pode sumir no meio deles. */
     static final List<String> STATUS_EM_ANDAMENTO =
-            List.of("AGUARDANDO_ACEITE", "ACEITO", "PRONTO_RETIRADA", "EM_ENTREGA");
+            List.of("AGUARDANDO_ACEITE", "ACEITO", "EM_PREPARACAO", "PRONTO_RETIRADA", "EM_ENTREGA");
 
     private static final String PEDIDOS_EM_ANDAMENTO_DA_PECA = """
             SELECT DISTINCT p.id_pedido
