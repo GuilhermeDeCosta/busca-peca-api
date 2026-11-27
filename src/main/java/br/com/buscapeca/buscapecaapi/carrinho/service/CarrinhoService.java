@@ -141,6 +141,20 @@ public class CarrinhoService {
     }
 
     /**
+     * Pecas e quantidades do carrinho (idPeca -> quantidade), na ordem em que entraram.
+     * Usado pelo checkout (BP1-24), que confere preco e estoque de novo com as linhas
+     * travadas. Sem carrinho, o mapa vem vazio.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, Integer> itensParaCompra(Long idUsuario) {
+        Map<Long, Integer> itens = new LinkedHashMap<>();
+        carrinhoRepository.findByIdUsuario(idUsuario)
+                .ifPresent(c -> itemRepository.findByIdCarrinhoOrderByIdAsc(c.getId())
+                        .forEach(i -> itens.put(i.getIdPeca(), i.getQuantidade())));
+        return itens;
+    }
+
+    /**
      * Frete e prazo por loja do carrinho para o CEP (BP1-23). Loja sem cotacao fica com o
      * frete a combinar (ADR-012). Se a consulta de CEP falhar, a regiao volta vazia e o
      * calculo segue: o front mostra o CEP no lugar da cidade.
