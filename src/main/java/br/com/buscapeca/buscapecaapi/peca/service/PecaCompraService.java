@@ -1,5 +1,6 @@
 package br.com.buscapeca.buscapecaapi.peca.service;
 
+import br.com.buscapeca.buscapecaapi.compartilhado.excecao.ConflitoException;
 import br.com.buscapeca.buscapecaapi.peca.dto.PecaParaCompra;
 import br.com.buscapeca.buscapecaapi.peca.entity.Peca;
 import br.com.buscapeca.buscapecaapi.peca.enums.StatusPeca;
@@ -18,9 +19,9 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * O que o carrinho (e depois o checkout) precisa saber das pecas: preco que vale agora,
- * estoque e se o anuncio pode ser comprado. Outros modulos chamam este servico e nunca
- * o PecaRepository (ADR-003).
+ * O que o carrinho e o checkout precisam saber das pecas: preco que vale agora, estoque e
+ * se o anuncio pode ser comprado. Tambem e aqui que o checkout trava as linhas e baixa o
+ * estoque. Outros modulos chamam este servico e nunca o PecaRepository (ADR-003).
  */
 @Service
 public class PecaCompraService {
@@ -45,11 +46,48 @@ public class PecaCompraService {
      */
     @Transactional(readOnly = true)
     public Map<Long, PecaParaCompra> buscarVarias(Collection<Long> idsPeca) {
-        Map<Long, PecaParaCompra> resultado = new LinkedHashMap<>();
         if (idsPeca.isEmpty()) {
-            return resultado;
+            return new LinkedHashMap<>();
         }
-        List<Peca> pecas = pecaRepository.findAllById(idsPeca);
+        return montar(pecaRepository.findAllById(idsPeca), idsPeca);
+    }
+
+    /**
+     * Mesmo resultado de buscarVarias, mas com as linhas das pecas bloqueadas ate o fim da
+     * transacao do checkout (BP1-24). Quem chama precisa estar numa transacao.
+     */
+    @Transactional
+    public Map<Long, PecaParaCompra> travarParaCompra(Collection<Long> idsPeca) {
+        if (idsPeca.isEmpty()) {
+            return new LinkedHashMap<>();
+        }
+        return montar(pecaRepository.travarParaCompra(idsPeca), idsPeca);
+    }
+
+    /**
+     * Baixa o estoque das pecas compradas (idPeca -> quantidade), na transacao do checkout.
+     * As linhas ja estao bloqueadas pelo travarParaCompra; a conferencia aqui e so uma
+     * garantia a mais para o estoque nunca ficar negativo.
+     */
+    @Transactional
+    public void baixarEstoque(Map<Long, Integer> quantidades) {
+        if (quantidades.isEmpty()) {
+            return;
+        }
+        List<Peca> pecas = pecaRepository.travarParaCompra(quantidades.keySet());
+        for (Peca p : pecas) {
+            int comprada = quantidades.get(p.getId());
+            if (comprada > p.getQuantidadeEstoque()) {
+                throw new ConflitoException("ESTOQUE_INSUFICIENTE", String.format(
+                        "O estoque de \"%s\" mudou. Ajuste a quantidade no carrinho.", p.getTitulo()));
+            }
+            p.setQuantidadeEstoque(p.getQuantidadeEstoque() - comprada);
+        }
+        pecaRepository.saveAll(pecas);
+    }
+
+    private Map<Long, PecaParaCompra> montar(List<Peca> pecas, Collection<Long> idsPeca) {
+        Map<Long, PecaParaCompra> resultado = new LinkedHashMap<>();
         Map<Long, BigDecimal> promocionais = vitrineRepository.precosPromocionais(idsPeca);
         Map<Long, String> fotos = vitrineRepository.fotosPrincipais(idsPeca);
         for (Peca p : pecas) {
