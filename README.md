@@ -2,7 +2,7 @@
 
 API REST do **Busca Peça**, marketplace de autopeças. É uma aplicação única em Java com Spring Boot, organizada como **monolito modular** (ADR-003), e é a única porta de acesso ao banco MySQL (ADR-001, ADR-004). O front-end fica em um repositório separado (ADR-015).
 
-> **Estado atual:** banco com as migrações V1 a V13, tratador de erros, paginação, Swagger, segurança (cadastro, login com JWT em cookie, logout, `me`, CSRF, CORS, recuperação de senha), perfil e endereços, catálogo (categorias, veículos, tags), loja, peças (cadastro, edição, detalhe, compatibilidade e histórico de preço) e busca. As rotas de usuário, catálogo e peças estão em [O que já funciona](#o-que-já-funciona). Carrinho, pedidos, comunicação, pós-venda e notificações ainda têm só as pastas, com um arquivo `.gitkeep`; apague-o quando a pasta receber o primeiro arquivo.
+> **Estado atual:** banco com as migrações V1 a V14, tratador de erros, paginação, Swagger, segurança (cadastro, login com JWT em cookie, logout, `me`, CSRF, CORS, recuperação de senha), perfil e endereços, catálogo (categorias, veículos, tags), loja, peças (cadastro, edição, detalhe, compatibilidade e histórico de preço), busca e carrinho. As rotas de usuário, catálogo, peças e carrinho estão em [O que já funciona](#o-que-já-funciona). Pedidos, comunicação, pós-venda e notificações ainda têm só as pastas, com um arquivo `.gitkeep`; apague-o quando a pasta receber o primeiro arquivo.
 
 ## Sumário
 
@@ -414,6 +414,11 @@ Todas as rotas começam com `http://localhost:8080/api`.
 | GET | `/pecas/{id}` | Público | Detalhe com as aplicações. Rascunho e pausado só para o dono |
 | PUT | `/pecas/{id}/compatibilidades` | Vendedor (dono) | Substitui as aplicações (marca, modelo, ano inicial e final, versão) |
 | GET | `/pecas/{id}/historico-preco` | Vendedor (dono) | `[{ data, precoAnterior, precoNovo }]`, da mudança mais recente para a publicação (`precoAnterior` nulo). Lista vazia se nunca foi publicada |
+| GET | `/carrinho` | Logado | `{ lojas: [{ loja, subtotal, itens }], quantidadeTotal, total }`, agrupado por loja na ordem em que cada uma entrou. Cada item traz `idItem`, `quantidade`, `precoUnitario` (promocional, se houver), `subtotal`, `estoqueSuficiente`, `disponivel` e a `peca`. Item pausado, excluído ou de loja inativa fica na lista com `disponivel: false` e fora do subtotal |
+| POST | `/carrinho/itens` | Logado | `{ idPeca, quantidade }` (quantidade opcional, padrão 1). Soma na linha da peça. Resposta `{ idPeca, quantidade, quantidadeTotal }`. 409 `ESTOQUE_INSUFICIENTE`; 404 se o anúncio não está ativo |
+| PATCH | `/carrinho/itens/{id}` | Logado | `{ quantidade }` (a nova, de 1 a 999). Devolve o carrinho recalculado. 409 `ESTOQUE_INSUFICIENTE`; 404 se o item não é do seu carrinho |
+| DELETE | `/carrinho/itens/{id}` e `/carrinho` | Logado | Remove um item ou esvazia o carrinho. 204 |
+| POST | `/carrinho/frete` | Logado | `{ cep }`. Resposta `{ regiao: { cidade, uf }, lojas: [{ idLoja, nomeLoja, retiradaBalcao, freteACombinar, opcoes }] }`. Sem transportadora integrada, toda loja volta com `freteACombinar: true` (ADR-012). 400 se o CEP for inválido |
 
 **Usuário administrador no perfil `dev`:** `admin@buscapeca.com.br` / `Admin@123`. Em produção, o e-mail e a senha vêm de `ADMIN_EMAIL` e `ADMIN_SENHA`, e nenhuma senha fica no repositório.
 
@@ -421,7 +426,7 @@ Todas as rotas começam com `http://localhost:8080/api`.
 
 **Dados de teste:** no perfil `dev`, a pasta `db/dev` carrega veículos e tags de exemplo (`V1000__dados_de_teste.sql`). Ela nunca roda em produção.
 
-**Testes unitários:** não precisam de banco (usam Mockito). Ex.: `.\mvnw.cmd test "-Dtest=HistoricoPrecoServiceTest,PecaServiceTest,PecaAnunciosServiceTest"` no PowerShell. Rodar `test` sem `-Dtest` inclui o `contextLoads`, que precisa do MySQL ligado.
+**Testes unitários:** não precisam de banco (usam Mockito). Ex.: `.\mvnw.cmd test "-Dtest=HistoricoPrecoServiceTest,PecaServiceTest,PecaAnunciosServiceTest,PecaCompraServiceTest,CarrinhoServiceTest"` no PowerShell. Rodar `test` sem `-Dtest` inclui o `contextLoads`, que precisa do MySQL ligado.
 
 **Front-end:** abra o front em `http://localhost:5500` (não em `127.0.0.1:5500`), senão o navegador trata como outro site e não envia o cookie de login.
 
