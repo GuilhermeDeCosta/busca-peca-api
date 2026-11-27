@@ -2,7 +2,9 @@ package br.com.buscapeca.buscapecaapi.pedido.controller;
 
 import br.com.buscapeca.buscapecaapi.pedido.dto.CompraResponse;
 import br.com.buscapeca.buscapecaapi.pedido.dto.FinalizarCompraRequest;
+import br.com.buscapeca.buscapecaapi.pedido.dto.MinhasComprasResponse;
 import br.com.buscapeca.buscapecaapi.pedido.service.CompraService;
+import br.com.buscapeca.buscapecaapi.pedido.service.MinhasComprasService;
 import br.com.buscapeca.buscapecaapi.seguranca.UsuarioLogado;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -11,21 +13,25 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 
-/** Compras (Documentacao do Back-end, secao 5.8): checkout e detalhe da compra. Exige login. */
+/** Compras (Documentacao do Back-end, secao 5.8): checkout, historico e detalhe da compra. Exige login. */
 @RestController
 @RequestMapping("/compras")
 public class CompraController {
 
     private final CompraService compraService;
+    private final MinhasComprasService minhasComprasService;
     private final UsuarioLogado usuarioLogado;
 
-    public CompraController(CompraService compraService, UsuarioLogado usuarioLogado) {
+    public CompraController(CompraService compraService, MinhasComprasService minhasComprasService,
+                            UsuarioLogado usuarioLogado) {
         this.compraService = compraService;
+        this.minhasComprasService = minhasComprasService;
         this.usuarioLogado = usuarioLogado;
     }
 
@@ -36,6 +42,20 @@ public class CompraController {
         URI local = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/compras/{id}").buildAndExpand(compra.idCompra()).toUri();
         return ResponseEntity.created(local).body(compra);
+    }
+
+    /**
+     * Meus pedidos (BP1-20, BP1-27): compras de quem esta logado, da mais recente, com o
+     * resumo dos cartoes. Filtros opcionais; de e ate em AAAA-MM-DD; pagina comeca em 0.
+     */
+    @GetMapping
+    public MinhasComprasResponse listar(@RequestParam(required = false) String q,
+                                        @RequestParam(required = false) String status,
+                                        @RequestParam(required = false) String de,
+                                        @RequestParam(required = false) String ate,
+                                        @RequestParam(required = false) Integer pagina,
+                                        @RequestParam(required = false) Integer tamanho) {
+        return minhasComprasService.listar(usuarioLogado.id(), q, status, de, ate, pagina, tamanho);
     }
 
     /** A compra com o pedido de cada loja (tela de confirmacao). So o comprador. */
