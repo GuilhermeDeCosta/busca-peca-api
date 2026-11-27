@@ -2,7 +2,7 @@
 
 API REST do **Busca Peça**, marketplace de autopeças. É uma aplicação única em Java com Spring Boot, organizada como **monolito modular** (ADR-003), e é a única porta de acesso ao banco MySQL (ADR-001, ADR-004). O front-end fica em um repositório separado (ADR-015).
 
-> **Estado atual:** banco com as migrações V1 a V14, tratador de erros, paginação, Swagger, segurança (cadastro, login com JWT em cookie, logout, `me`, CSRF, CORS, recuperação de senha), perfil e endereços, catálogo (categorias, veículos, tags), loja, peças (cadastro, edição, detalhe, compatibilidade e histórico de preço), busca e carrinho. As rotas de usuário, catálogo, peças e carrinho estão em [O que já funciona](#o-que-já-funciona). Pedidos, comunicação, pós-venda e notificações ainda têm só as pastas, com um arquivo `.gitkeep`; apague-o quando a pasta receber o primeiro arquivo.
+> **Estado atual:** banco com as migrações V1 a V15, tratador de erros, paginação, Swagger, segurança (cadastro, login com JWT em cookie, logout, `me`, CSRF, CORS, recuperação de senha), perfil e endereços, catálogo (categorias, veículos, tags), loja, peças (cadastro, edição, detalhe, compatibilidade e histórico de preço), busca, carrinho e checkout. As rotas de usuário, catálogo, peças, carrinho e compras estão em [O que já funciona](#o-que-já-funciona). Os pedidos do lado do vendedor (aceitar, recusar, retirada e entrega) ainda faltam. Comunicação, pós-venda e notificações ainda têm só as pastas, com um arquivo `.gitkeep`; apague-o quando a pasta receber o primeiro arquivo.
 
 ## Sumário
 
@@ -343,6 +343,8 @@ O esquema `buscapeca` é criado **somente** pelas migrações Flyway em `src/mai
 | V11 | loja: `telefone`, `horario_retirada`, `motoboy_proprio`, `entrega_combinar`, `pedido_minimo_frete_gratis` (BP1-219) |
 | V12 | modelo de peça do front: `status` (RASCUNHO, ATIVO, PAUSADO, EXCLUIDO) no lugar de `anuncio_ativo`, origem NACIONAL ou IMPORTADA, `marca_peca`, `caracteristicas`; categoria, OEM e preço opcionais no rascunho (BP1-220) |
 | V13 | historico_preco: `preco_anterior` opcional (a linha da publicação não tem preço anterior) e índice por peça e data (BP1-53) |
+| V14 | loja: `horario_retirada` com 120 caracteres e uma coluna só (`entrega_rapida`) para o motoboy próprio |
+| V15 | pedido: `observacao` (recado do comprador no checkout) e status `EM_PREPARACAO` (BP1-234) |
 
 As tabelas `diagrama_tecnico` e `hotspot` (BP1-12, fase 2) entram na próxima versão livre quando forem priorizadas.
 
@@ -408,7 +410,7 @@ Todas as rotas começam com `http://localhost:8080/api`.
 | GET | `/tags` | Público | Tags dos filtros |
 | GET | `/pecas?loja=minha&q=&status=&estoque=&pagina=&tamanho=` | Vendedor | Anúncios da própria loja (ativos, pausados e rascunhos), do mais novo para o mais antigo. `status`: ATIVO, PAUSADO ou RASCUNHO; `estoque`: ZERADO, BAIXO ou NORMAL; `pagina` começa em 1. Resposta `{ itens, pagina, tamanho, totalRegistros, totalPaginas }` |
 | PATCH | `/pecas/{id}/pausar` e `/pecas/{id}/reativar` | Vendedor (dono) | `{ idPeca, status, atualizadoEm }`. 409 `STATUS_INVALIDO` se o anúncio não estiver ativo (pausar) ou pausado (reativar); 409 `ESTOQUE_ZERADO` ao reativar sem estoque |
-| DELETE | `/pecas/{id}` | Vendedor (dono) | Exclusão lógica (status EXCLUIDO), grava `EXCLUIR_PECA` em `log_auditoria`. 204; 404 se já foi excluído; 409 `PEDIDOS_EM_ANDAMENTO` se a peça está em pedido aguardando aceite, aceito, pronto ou em entrega |
+| DELETE | `/pecas/{id}` | Vendedor (dono) | Exclusão lógica (status EXCLUIDO), grava `EXCLUIR_PECA` em `log_auditoria`. 204; 404 se já foi excluído; 409 `PEDIDOS_EM_ANDAMENTO` se a peça está em pedido aguardando aceite, aceito, em preparação, pronto ou em entrega |
 | POST | `/pecas` | Vendedor | Cadastra a peça como rascunho (só o título é obrigatório) ou publicada (exige categoria, OEM e preço). 201 com `Location` |
 | PUT | `/pecas/{id}` | Vendedor (dono) | Edita a peça inteira. Publicar ou mudar o preço grava o histórico de preço |
 | GET | `/pecas/{id}` | Público | Detalhe com as aplicações. Rascunho e pausado só para o dono |
@@ -419,6 +421,8 @@ Todas as rotas começam com `http://localhost:8080/api`.
 | PATCH | `/carrinho/itens/{id}` | Logado | `{ quantidade }` (a nova, de 1 a 999). Devolve o carrinho recalculado. 409 `ESTOQUE_INSUFICIENTE`; 404 se o item não é do seu carrinho |
 | DELETE | `/carrinho/itens/{id}` e `/carrinho` | Logado | Remove um item ou esvazia o carrinho. 204 |
 | POST | `/carrinho/frete` | Logado | `{ cep }`. Resposta `{ regiao: { cidade, uf }, lojas: [{ idLoja, nomeLoja, retiradaBalcao, freteACombinar, opcoes }] }`. Sem transportadora integrada, toda loja volta com `freteACombinar: true` (ADR-012). 400 se o CEP for inválido |
+| POST | `/compras` | Logado | Checkout (BP1-24): `{ idEndereco, lojas: [{ idLoja, modalidade: RETIRADA ou ENTREGA, observacao, cienciaPagamentoDireto }], totalEsperado? }`. Numa transação só: confere de novo estoque e preço com as peças travadas, cria a compra e **um pedido por loja** (status `AGUARDANDO_ACEITE`, código `BP-{id}`, código de retirada), baixa o estoque e esvazia o carrinho. 201 com `Location` e `{ idCompra, criadaEm, total, idEndereco, pedidos: [{ idPedido, codigo, idLoja, nomeLoja, status, modalidade, observacao, codigoRetirada, subtotal, itens }] }`; `codigoRetirada` só na retirada. 400: sem ciência, entrega sem endereço ou modalidade que a loja não oferece. 409 (nada é gravado): `CARRINHO_VAZIO`, `CARRINHO_ALTERADO`, `ANUNCIO_INDISPONIVEL`, `ESTOQUE_INSUFICIENTE` ou `PRECO_ALTERADO` (só se `totalEsperado` vier e for diferente) |
+| GET | `/compras/{id}` | Logado (comprador) | Mesmo formato do checkout, com o preço do momento da compra. 404 se a compra é de outra pessoa |
 
 **Usuário administrador no perfil `dev`:** `admin@buscapeca.com.br` / `Admin@123`. Em produção, o e-mail e a senha vêm de `ADMIN_EMAIL` e `ADMIN_SENHA`, e nenhuma senha fica no repositório.
 
@@ -426,7 +430,7 @@ Todas as rotas começam com `http://localhost:8080/api`.
 
 **Dados de teste:** no perfil `dev`, a pasta `db/dev` carrega veículos e tags de exemplo (`V1000__dados_de_teste.sql`). Ela nunca roda em produção.
 
-**Testes unitários:** não precisam de banco (usam Mockito). Ex.: `.\mvnw.cmd test "-Dtest=HistoricoPrecoServiceTest,PecaServiceTest,PecaAnunciosServiceTest,PecaCompraServiceTest,CarrinhoServiceTest"` no PowerShell. Rodar `test` sem `-Dtest` inclui o `contextLoads`, que precisa do MySQL ligado.
+**Testes unitários:** não precisam de banco (usam Mockito). Ex.: `.\mvnw.cmd test "-Dtest=HistoricoPrecoServiceTest,PecaServiceTest,PecaAnunciosServiceTest,PecaCompraServiceTest,CarrinhoServiceTest,CompraServiceTest"` no PowerShell. Rodar `test` sem `-Dtest` inclui o `contextLoads`, que precisa do MySQL ligado.
 
 **Front-end:** abra o front em `http://localhost:5500` (não em `127.0.0.1:5500`), senão o navegador trata como outro site e não envia o cookie de login.
 
