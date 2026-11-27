@@ -14,9 +14,6 @@ public interface ItemCarrinhoRepository extends JpaRepository<ItemCarrinho, Long
     /** Itens na ordem em que entraram no carrinho. */
     List<ItemCarrinho> findByIdCarrinhoOrderByIdAsc(Long idCarrinho);
 
-    /** A linha da peca no carrinho, para somar a quantidade. */
-    Optional<ItemCarrinho> findByIdCarrinhoAndIdPeca(Long idCarrinho, Long idPeca);
-
     /** O item so se for deste carrinho: item de outro usuario vira 404. */
     Optional<ItemCarrinho> findByIdAndIdCarrinho(Long id, Long idCarrinho);
 
